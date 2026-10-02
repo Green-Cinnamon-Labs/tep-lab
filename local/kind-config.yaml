@@ -1,8 +1,8 @@
 # Kind cluster config para o lab TEP local.
 # Cluster name: tep-lab
 #
-# A planta roda fora do Kind (Docker standalone).
-# O operator roda dentro do Kind e conecta na planta via host.docker.internal.
+# A planta e o historian rodam fora do Kind (compose ou nativo).
+# O operator roda dentro do Kind e consulta o historian via host.docker.internal:8090.
 #
 # Uso: kind create cluster --config kind-config.yaml
 

@@ -4,42 +4,32 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.20.1
-  name: plcmachines.infrastructure.greenlabs.io
+  name: costfunctions.supervision.greenlabs.io
 spec:
-  group: infrastructure.greenlabs.io
+  group: supervision.greenlabs.io
   names:
-    kind: PLCMachine
-    listKind: PLCMachineList
-    plural: plcmachines
-    singular: plcmachine
+    kind: CostFunction
+    listKind: CostFunctionList
+    plural: costfunctions
+    shortNames:
+    - cf
+    singular: costfunction
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .status.phase
-      name: Phase
+    - jsonPath: .spec.unit
+      name: Unit
       type: string
-    - jsonPath: .spec.plantAddress
-      name: Plant
-      type: string
-    - format: float
-      jsonPath: .status.plantTime
-      name: Time (h)
+    - jsonPath: .spec.reference
+      name: Reference
       type: number
-    - jsonPath: .status.isdActive
-      name: ISD
-      type: boolean
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: |-
-          PLCMachine is the Schema for the plcmachines API.
-          It represents a supervisory controller that monitors a TEP plant via gRPC.
-          The spec defines a SUPERVISORY POLICY — operating ranges and response rules.
-          The status is the operator's MEMORY — last readings, trends, and actions taken.
-          The reconciler loop: Observe → Evaluate → Decide → Act → Record.
+        description: CostFunction is a declared objective function over plant signals.
         properties:
           apiVersion:
             description: |-
@@ -59,131 +49,290 @@ spec:
           metadata:
             type: object
           spec:
-            description: spec defines the supervisory policy
+            description: CostFunctionSpec declares the objective function J = Σ terms.
             properties:
-              monitoringInterval:
-                description: monitoringInterval configures the adaptive polling frequency.
-                properties:
-                  baseMs:
-                    default: 2000
-                    description: baseMs is the polling interval when the plant is
-                      stable (ms).
-                    format: int32
-                    minimum: 100
-                    type: integer
-                  transientMs:
-                    default: 200
-                    description: |-
-                      transientMs is the polling interval during transients (ms).
-                      Used when the operator detects rapid changes in XMEAS values.
-                    format: int32
-                    minimum: 50
-                    type: integer
-                type: object
-              operatingRanges:
-                description: |-
-                  operatingRanges defines acceptable limits for plant variables (XMEAS).
-                  The operator monitors these and triggers response rules when violated.
+              reference:
+                description: Reference is J at nominal operation, used for comparison
+                  in status.
+                type: number
+              source:
+                description: Source cites where the function comes from (paper, table).
+                type: string
+              terms:
+                description: Terms summed to compute J.
                 items:
                   description: |-
-                    OperatingRange defines an acceptable range for a plant measurement (XMEAS).
-                    When the measured value exits this range, the operator evaluates response rules.
+                    CostTerm is one additive term of the cost function: coefficient × Π mean(signal).
+
+                    A term with one signal is linear (e.g. price × compressor power). A term with two signals is a
+                    product (e.g. price × flow × composition). Unit conversions are folded into the coefficient.
+                  properties:
+                    coefficient:
+                      description: Coefficient multiplies the product of the signals'
+                        window means.
+                      type: number
+                    description:
+                      description: Description is free text, typically how the coefficient
+                        was derived.
+                      type: string
+                    name:
+                      description: Name identifies the term in status (e.g. "purge.A").
+                      minLength: 1
+                      type: string
+                    signals:
+                      description: Signals are historian keys (OPC-UA browse names,
+                        e.g. "xmeas.compressor.work").
+                      items:
+                        type: string
+                      minItems: 1
+                      type: array
+                  required:
+                  - coefficient
+                  - name
+                  - signals
+                  type: object
+                minItems: 1
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
+              unit:
+                description: Unit of J (e.g. "$/h").
+                minLength: 1
+                type: string
+            required:
+            - terms
+            - unit
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.20.1
+  name: operatingpolicies.supervision.greenlabs.io
+spec:
+  group: supervision.greenlabs.io
+  names:
+    kind: OperatingPolicy
+    listKind: OperatingPolicyList
+    plural: operatingpolicies
+    shortNames:
+    - op
+    singular: operatingpolicy
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.costFunctionRef
+      name: CostFunction
+      type: string
+    - jsonPath: .spec.maxCost
+      name: MaxCost
+      type: number
+    - jsonPath: .spec.windowSeconds
+      name: Window
+      type: integer
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: OperatingPolicy declares targets, constraints and a cost budget
+          over a CostFunction.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: |-
+              OperatingPolicySpec is one way of operating the plant: what J must not exceed, which signals
+              must hit which targets, and which limits must hold.
+            properties:
+              constraints:
+                items:
+                  description: |-
+                    SignalConstraint asks a signal's window mean to stay within [Min, Max]. Either bound may be
+                    omitted.
                   properties:
                     max:
-                      description: max is the upper acceptable limit. Above this triggers
-                        "above_max".
                       type: number
                     min:
-                      description: min is the lower acceptable limit. Below this triggers
-                        "below_min".
                       type: number
-                    name:
-                      description: |-
-                        name is a human-readable identifier for this range (e.g. "reactor_pressure").
-                        Referenced by ResponseRule.watchRef.
+                    signal:
+                      minLength: 1
                       type: string
-                    xmeasIndex:
-                      description: |-
-                        xmeasIndex selects which process measurement to monitor (0-based).
-                        Maps to XMEAS(index+1) in TEP nomenclature.
-                      format: int32
-                      maximum: 40
-                      minimum: 0
-                      type: integer
                   required:
-                  - max
-                  - min
-                  - name
-                  - xmeasIndex
+                  - signal
                   type: object
                 type: array
-              plantAddress:
-                description: |-
-                  plantAddress is the gRPC endpoint of the plant service
-                  (e.g. "te-plant.default.svc:50051").
+                x-kubernetes-list-map-keys:
+                - signal
+                x-kubernetes-list-type: map
+              costFunctionRef:
+                description: CostFunctionRef names a CostFunction in the same namespace.
+                minLength: 1
                 type: string
-              responseRules:
+              description:
+                description: Description is free text (e.g. "Downs & Vogel mode 1,
+                  base case").
+                type: string
+              maxCost:
+                description: MaxCost is the budget for J. Omitted means J is observed
+                  but not judged.
+                type: number
+              persistenceEvaluations:
+                default: 1
                 description: |-
-                  responseRules defines what the operator does when a variable exits
-                  its acceptable range. Each rule maps a condition to a controller action.
+                  PersistenceEvaluations is how many consecutive failing evaluations are needed before the
+                  plant is declared non-compliant (persistence rule from control-loop performance monitoring,
+                  Bradu et al. 2018), so short transients don't flip the verdict.
+                format: int32
+                minimum: 1
+                type: integer
+              targets:
                 items:
-                  description: |-
-                    ResponseRule defines what the operator does when a variable exits its range.
-                    This is a supervisory decision: "if reactor pressure exceeds max, increase
-                    the gain of the pressure controller".
+                  description: SignalTarget asks a signal's window mean to stay within
+                    ±TolerancePercent of Value.
                   properties:
-                    adjustValue:
-                      description: |-
-                        adjustValue is the new value to set for the parameter.
-                        For "enabled", use 1.0 (true) or 0.0 (false).
+                    signal:
+                      minLength: 1
+                      type: string
+                    tolerancePercent:
+                      minimum: 0
                       type: number
-                    condition:
-                      description: 'condition is when this rule fires: "above_max"
-                        or "below_min".'
-                      enum:
-                      - above_max
-                      - below_min
-                      type: string
-                    controllerID:
-                      description: |-
-                        controllerID is the ID of the controller to adjust on the plant.
-                        Must match an existing controller returned by ListControllers.
-                      type: string
-                    name:
-                      description: name is a human-readable identifier for this rule.
-                      type: string
-                    parameter:
-                      description: parameter is which controller parameter to change.
-                      enum:
-                      - kp
-                      - ki
-                      - kd
-                      - setpoint
-                      - bias
-                      - enabled
-                      type: string
-                    watchRef:
-                      description: watchRef references an OperatingRange by name.
-                      type: string
+                    value:
+                      type: number
                   required:
-                  - adjustValue
-                  - condition
-                  - controllerID
-                  - name
-                  - parameter
-                  - watchRef
+                  - signal
+                  - tolerancePercent
+                  - value
                   type: object
                 type: array
+                x-kubernetes-list-map-keys:
+                - signal
+                x-kubernetes-list-type: map
+              windowSeconds:
+                default: 60
+                description: WindowSeconds is the averaging window requested from
+                  the historian.
+                format: int32
+                minimum: 1
+                type: integer
             required:
-            - plantAddress
+            - costFunctionRef
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.20.1
+  name: plants.supervision.greenlabs.io
+spec:
+  group: supervision.greenlabs.io
+  names:
+    kind: Plant
+    listKind: PlantList
+    plural: plants
+    singular: plant
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.activePolicy
+      name: Policy
+      type: string
+    - jsonPath: .status.cost.value
+      name: Cost
+      type: number
+    - jsonPath: .status.cost.unit
+      name: Unit
+      type: string
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Plant is an industrial plant observed by the supervisory layer.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: PlantSpec points the operator at a plant's historian and
+              at the policy currently in force.
+            properties:
+              evaluationIntervalSeconds:
+                default: 30
+                description: EvaluationIntervalSeconds is how often the plant is evaluated.
+                format: int32
+                minimum: 1
+                type: integer
+              historianURL:
+                description: HistorianURL is the base URL of the historian (e.g. "http://tep-historian:8090").
+                minLength: 1
+                type: string
+              policyRef:
+                description: PolicyRef names the active OperatingPolicy in the same
+                  namespace.
+                minLength: 1
+                type: string
+            required:
+            - historianURL
+            - policyRef
             type: object
           status:
-            description: status is the operator's memory of plant state
+            description: PlantStatus is the supervisory layer's verdict about the
+              plant.
             properties:
+              activePolicy:
+                description: ActivePolicy is the policy the verdict refers to.
+                type: string
               conditions:
-                description: |-
-                  conditions are standard Kubernetes status conditions.
-                  Types: "Available", "Progressing", "Degraded".
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -242,96 +391,80 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
-              isdActive:
-                description: isdActive is true when the plant triggered an emergency
-                  shutdown.
-                type: boolean
-              lastAction:
-                description: |-
-                  lastAction records the most recent supervisory action taken.
-                  Nil if the operator has not yet intervened.
+              consecutiveViolations:
+                description: ConsecutiveViolations counts consecutive failing evaluations
+                  under ActivePolicy.
+                format: int32
+                type: integer
+              constraints:
+                items:
+                  description: ConstraintResult is the outcome of one SignalConstraint.
+                  properties:
+                    observed:
+                      type: number
+                    satisfied:
+                      type: boolean
+                    signal:
+                      type: string
+                  required:
+                  - satisfied
+                  - signal
+                  type: object
+                type: array
+              cost:
+                description: CostStatus is the evaluated value of J.
                 properties:
-                  controllerID:
-                    description: controllerID is the controller that was adjusted.
-                    type: string
-                  parameter:
-                    description: parameter is which parameter was changed.
-                    type: string
-                  ruleName:
-                    description: ruleName is which ResponseRule triggered this action.
-                    type: string
-                  timestamp:
-                    description: timestamp is when the action was executed.
-                    format: date-time
+                  maxCost:
+                    type: number
+                  reference:
+                    type: number
+                  unit:
                     type: string
                   value:
-                    description: value is the value that was set.
                     type: number
                 required:
-                - controllerID
-                - parameter
-                - ruleName
-                - timestamp
+                - unit
                 - value
                 type: object
-              lastReconcileTime:
-                description: lastReconcileTime is when the operator last read the
-                  plant.
+              lastEvaluationTime:
                 format: date-time
                 type: string
               phase:
-                description: phase summarizes the plant state as perceived by the
-                  operator.
+                description: PlantPhase summarizes the verdict.
                 enum:
                 - Pending
-                - Stable
-                - Transient
-                - Alarm
-                - Shutdown
+                - Compliant
+                - NonCompliant
                 type: string
-              plantTime:
-                description: plantTime is the simulation clock in hours.
-                type: number
-              variables:
-                description: |-
-                  variables stores the operator's memory of each monitored XMEAS.
-                  Includes current value, previous value, trend, and in-range flag.
+              targets:
                 items:
-                  description: VariableStatus is the operator's memory of one plant
-                    measurement.
+                  description: TargetResult is the outcome of one SignalTarget.
                   properties:
-                    inRange:
-                      description: inRange is true when the value is within the OperatingRange
-                        limits.
+                    met:
                       type: boolean
-                    name:
-                      description: name matches OperatingRange.Name.
-                      type: string
-                    previousValue:
-                      description: |-
-                        previousValue is the reading from the last reconcile cycle.
-                        Used to compute trend.
+                    observed:
                       type: number
-                    trend:
-                      description: 'trend indicates the direction: Rising, Falling,
-                        or Stable.'
-                      enum:
-                      - Rising
-                      - Falling
-                      - Stable
+                    signal:
+                      type: string
+                    target:
+                      type: number
+                  required:
+                  - met
+                  - signal
+                  - target
+                  type: object
+                type: array
+              terms:
+                items:
+                  description: TermContribution is one term's share of J.
+                  properties:
+                    name:
                       type: string
                     value:
-                      description: value is the latest reading.
                       type: number
-                    xmeasIndex:
-                      description: xmeasIndex is which XMEAS this corresponds to.
-                      format: int32
-                      type: integer
                   required:
-                  - inRange
                   - name
                   - value
-                  - xmeasIndex
                   type: object
                 type: array
             type: object

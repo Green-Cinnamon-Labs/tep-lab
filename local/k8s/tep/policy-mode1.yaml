@@ -1,0 +1,41 @@
+# Política Modo 1 (caso base) do TEP — Downs & Vogel (1993).
+#
+# - Metas: vazão de produto e composição G/H do caso base (Tabelas 4 e 5), com a tolerância de
+#   ±5 % que o artigo usa para variabilidade aceitável do produto. A razão G/H 50/50 do Modo 1 não
+#   é um sinal único, então é expressa como metas em G e H separadamente.
+# - Restrições: limites normais de operação da Tabela 6 (não os de shutdown).
+# - Orçamento de custo: escolha de política, não do artigo — 5 % acima da referência de 170.6 $/h.
+apiVersion: supervision.greenlabs.io/v1alpha1
+kind: OperatingPolicy
+metadata:
+  name: tep-mode1
+spec:
+  costFunctionRef: tep-downs-vogel
+  description: "Downs & Vogel mode 1 (base case): 50/50 G/H, product 22.949 m³/h"
+  windowSeconds: 60
+  maxCost: 179.0
+  persistenceEvaluations: 3
+  targets:
+    - signal: xmeas.stream11.flow_rate      # XMEAS(17), m³/h
+      value: 22.949
+      tolerancePercent: 5
+    - signal: xmeas.stream11.component.g    # XMEAS(40), mol%
+      value: 53.724
+      tolerancePercent: 5
+    - signal: xmeas.stream11.component.h    # XMEAS(41), mol%
+      value: 43.828
+      tolerancePercent: 5
+  constraints:
+    - signal: xmeas.reactor.pressure        # XMEAS(7), kPa
+      max: 2895
+    - signal: xmeas.reactor.level           # XMEAS(8), %
+      min: 50
+      max: 100
+    - signal: xmeas.reactor.temperature     # XMEAS(9), °C
+      max: 150
+    - signal: xmeas.separator.level         # XMEAS(12), %
+      min: 30
+      max: 100
+    - signal: xmeas.stripper.level          # XMEAS(15), %
+      min: 30
+      max: 100

@@ -1,0 +1,12 @@
+# A planta TEP vista pelo operator. O historian roda fora do Kind (docker compose ou nativo), e o
+# Pod do operator chega nele por host.docker.internal.
+#
+# Trocar de política = trocar `policyRef` (kubectl edit plant tep).
+apiVersion: supervision.greenlabs.io/v1alpha1
+kind: Plant
+metadata:
+  name: tep
+spec:
+  historianURL: "http://host.docker.internal:8090"
+  policyRef: tep-mode1
+  evaluationIntervalSeconds: 30

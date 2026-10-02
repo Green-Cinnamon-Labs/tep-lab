@@ -1,14 +1,15 @@
 # Lab Local — Kind + TEP
 
-Lab local para rodar o experimento Tennessee Eastman completo no seu PC.
+Lab local para rodar o experimento Tennessee Eastman completo no seu PC: a planta publica sinais, o historian os agrega, e o Kubernetes acompanha a funcao de custo J e o cumprimento da politica de operacao.
 
-Sao tres pecas:
+Sao quatro pecas:
 
-| Peca | Container | Funcao |
+| Peca | Onde roda | Funcao |
 |------|-----------|--------|
-| **te-plant** | Docker standalone | Planta TEP (Rust). Simula o processo quimico e expoe metricas via gRPC na porta 50051. |
-| **plc-operator** | Pod dentro do Kind | Operator K8s (Go). Conecta na planta, le XMEAS, grava status no CRD, e (futuramente) toma acoes de controle. |
-| **tep-ihm** | Docker standalone | Dashboard web (Python). Mostra graficos e tabelas da planta em tempo real na porta 8080. |
+| **tep-plant** | Docker ou nativo | Planta TEP (Rust). Publica sinais via OPC-UA na porta 4840. |
+| **tep-historian** | Docker ou nativo | Coleta os sinais via OPC-UA e serve medias por janela via HTTP na porta 8090. |
+| **tep-operator** | Pod dentro do Kind | Operator K8s (Go). Le a funcao de custo e a politica (CRDs), pede medias ao historian e grava o veredito no `status` do `Plant`. |
+| **tep-ihm** | Docker ou nativo | Dashboard (Python) na porta 8080. Sinais ao vivo via OPC-UA; veredito via API do K8s. |
 
 **Nenhuma cloud.** So Docker + Kind.
 
@@ -24,98 +25,89 @@ Sao tres pecas:
 
 ```
 local/
-├── docker-compose.yml            # Sobe planta + IHM juntos
-├── kind-config.yaml              # Config do cluster Kind
-├── setup.sh                      # Script que sobe o cluster + operator
+├── docker-compose.yml               # Sobe planta + historian + IHM
+├── kind-config.yaml                 # Config do cluster Kind
+├── setup.sh                         # Sobe o cluster, o operator e os manifestos TEP
 ├── k8s/
-│   ├── crd.yaml                  # CRD PLCMachine (copiar do operator)
-│   ├── operator-deployment.yaml  # Deploy + RBAC do operator
-│   └── plcmachine-sample.yaml   # CR de exemplo (politica supervisoria)
-└── README.md                     # Este arquivo
+│   ├── crd.yaml                     # As 3 CRDs (copiadas de tep-operator/config/crd/bases/)
+│   ├── operator-deployment.yaml     # Deploy + RBAC do operator
+│   └── tep/
+│       ├── cost-function-downs-vogel.yaml  # J de Downs & Vogel (1993), Tabela 9 — 12 termos
+│       ├── policy-mode1.yaml               # Modo 1: metas, restricoes (Tabela 6), orcamento
+│       └── plant.yaml                      # A planta: historian + politica ativa
+└── README.md
 ```
 
 ---
 
 ## Teste completo — passo a passo
 
-### 1. Buildar as tres imagens
+### 1. Planta + historian (+ IHM)
 
-Antes de tudo, as imagens Docker precisam existir na sua maquina. Cada uma vem de um repo diferente:
-
-```bash
-# Planta (tep-plant)
-cd <path-to-tep-plant>
-docker build -t te-plant:latest .
-
-# Operator (tep-operator)
-cd <path-to-tep-operator>
-docker build -t plc-operator:latest .
-
-# IHM (tep-ihm)
-cd <path-to-tep-ihm>
-docker build -t tep-ihm:latest .
-```
-
-Apos o build, confirme que as tres imagens aparecem no Docker Desktop ou via `docker images`.
-
-### 2. Subir planta + IHM (docker compose)
+**Opcao A — Docker compose.** Builde as imagens e suba:
 
 ```bash
+# tep-plant: o Dockerfile copia um binario Linux ja compilado (target/release/tep-plant),
+# com a feature opcua ligada:  cargo build --release --bin tep-plant --features opcua
+docker build -t tep-plant:latest <path-to-tep-plant>
+docker build -t tep-historian:latest <path-to-tep-historian>
+docker build -t tep-ihm:latest <path-to-tep-ihm>
+
 cd tep-supervisor/local/
 docker compose up
 ```
 
-Isso sobe dois containers:
-- `te-plant` — planta rodando gRPC na porta 50051
-- `tep-ihm` — dashboard na porta 8080, conectando na planta pela rede interna do Compose
-
-A IHM ja consegue mostrar dados da planta mesmo sem o Kind rodando.
-
-Abra `http://localhost:8080` e voce deve ver:
-- Graficos de pressao, temperatura, nivel e vazao atualizando em tempo real
-- Tabelas de XMEAS e XMV com valores, unidades e nomes
-- Painel de alarmes
-- Status do solver (Steady-state / Slow transient / Fast transient)
-
-### 3. Subir o Kind + operator (setup.sh)
-
-Em outro terminal:
+**Opcao B — nativo** (o caminho mais simples no Windows, onde o binario da planta e `.exe`):
 
 ```bash
+cd <path-to-tep-plant>      && cargo run --features opcua
+cd <path-to-tep-historian>  && poetry run tep-historian
+cd <path-to-tep-ihm>        && poetry run python src/server.py   # opcional
+```
+
+Confira o historian: `curl localhost:8090/healthz` deve mostrar `"connected": true` e ~60 sinais.
+
+### 2. Kind + operator + manifestos TEP
+
+```bash
+docker build -t tep-operator:latest <path-to-tep-operator>
 cd tep-supervisor/local/
 bash setup.sh
 ```
 
-O script:
-1. Cria o cluster Kind `tep-lab` (se nao existir)
-2. Copia a imagem `plc-operator:latest` do Docker Desktop pra dentro do Kind (`kind load`)
-3. Aplica o CRD PLCMachine
-4. Deploya o operator e o CR de exemplo
+O script cria o cluster `tep-lab`, carrega a imagem do operator, aplica as CRDs, deploya o operator e aplica `k8s/tep/`.
 
-### 4. Verificar
+### 3. Verificar
 
 ```bash
-# Operator rodando?
-kubectl get pods
-
-# Status do PLCMachine com metricas reais da planta?
-kubectl get plcmachines
-kubectl get plcmachine tep-baseline -o yaml
+kubectl get plants
+kubectl describe plant tep
 ```
 
-O que voce deve ver:
+Esperado (em ate ~30 s):
 
-- Pod `plc-operator-*` com status `Running`
-- PLCMachine `tep-baseline` com `phase: Stable`
-- No `.status.variables`: valores reais de XMEAS lidos da planta
-- No `.status.plantTime`: tempo de simulacao avancando
+```
+NAME   POLICY      COST     UNIT   PHASE       AGE
+tep    tep-mode1   166.39   $/h    Compliant   1m
+```
 
-### 5. Copiar o CRD (se necessario)
+Se a fase ficar `Pending`, a condition `DataAvailable` diz o motivo (`HistorianUnreachable`, `PlantDisconnected`, `MissingSignals`, `PolicyNotFound`...).
 
-O CRD e gerado pelo `controller-gen` no repo do operator. Se voce alterou os types do CRD, copie a versao atualizada:
+### 4. Trocar de politica ou mexer no orcamento
 
 ```bash
-cp <path-to-tep-operator>/config/crd/bases/infrastructure.greenlabs.io_plcmachines.yaml local/k8s/crd.yaml
+kubectl edit operatingpolicy tep-mode1     # ex.: baixar maxCost para 150 → CostWithinBudget=False
+kubectl edit plant tep                     # trocar policyRef para outra OperatingPolicy
+```
+
+O operator reavalia na hora. O veredito so vira `NonCompliant` depois de `persistenceEvaluations` avaliacoes ruins seguidas.
+
+### Atualizar as CRDs
+
+Se os types mudarem em `tep-operator`, regenere la (`make generate manifests`) e copie:
+
+```bash
+cat <path-to-tep-operator>/config/crd/bases/supervision.greenlabs.io_*.yaml > k8s/crd.yaml
 ```
 
 ---
@@ -123,42 +115,30 @@ cp <path-to-tep-operator>/config/crd/bases/infrastructure.greenlabs.io_plcmachin
 ## Conectividade
 
 ```
-Docker Desktop (host)
-├── te-plant (:50051)         ← container Compose
-├── tep-ihm  (:8080)          ← container Compose, conecta em te-plant:50051 via rede Compose
-└── tep-lab-control-plane     ← container Kind
-    └── plc-operator (Pod)    ← conecta em host.docker.internal:50051
+Host (Docker Desktop)
+├── tep-plant      (:4840)   ← compose ou nativo
+├── tep-historian  (:8090)   ← compose ou nativo, le a planta via OPC-UA
+├── tep-ihm        (:8080)   ← compose ou nativo
+└── tep-lab-control-plane    ← container Kind
+    └── tep-operator (Pod)   ← chama http://host.docker.internal:8090
 ```
 
-- A **IHM** conecta na planta pelo nome do service do Compose (`te-plant:50051`).
-- O **operator** (dentro do Kind) conecta na planta via `host.docker.internal:50051`, porque a planta expoe a porta 50051 no host e o Kind acessa o host por essa rota.
-- O Kind e o Compose sao redes Docker separadas, mas ambos conseguem alcancar a planta pela porta exposta no host.
+- O **operator** (dentro do Kind) so fala com o historian, nunca com a planta. Chega nele por `host.docker.internal:8090`, porque a porta 8090 esta exposta no host.
+- A **IHM** le os sinais direto da planta (OPC-UA) e o veredito pela API do Kind (`K8S_SERVER=https://host.docker.internal:6443` quando roda em container).
 
 ---
 
 ## Comandos uteis
 
 ```bash
-# Parar planta + IHM
-docker compose down
-
-# Logs do operator
-kubectl logs -f deploy/plc-operator
-
-# Detalhes do PLCMachine
-kubectl describe plcmachine tep-baseline
-
-# Destruir o cluster Kind
-kind delete cluster --name tep-lab
-
-# Rebuildar so uma imagem (ex: IHM apos mudanca no frontend)
-cd <path-to-tep-ihm>
-docker build -t tep-ihm:latest .
-docker compose up -d tep-ihm    # reinicia so a IHM
+docker compose down                         # parar planta + historian + IHM
+kubectl logs -f deploy/tep-operator         # logs do operator (uma linha por avaliacao)
+kubectl get costfunctions,operatingpolicies
+kubectl get plant tep -o yaml               # status completo: termos de J, metas, restricoes
+kind delete cluster --name tep-lab          # destruir o cluster
 ```
 
 ## Issues relacionadas
 
-- [#39 — Setup Kind cluster local](https://github.com/Green-Cinnamon-Labs/tep-supervisor/issues/39)
-- [#40 — Deploy operator como Deployment](https://github.com/Green-Cinnamon-Labs/tep-supervisor/issues/40)
-- [#42 — Dashboard de observabilidade](https://github.com/Green-Cinnamon-Labs/spec-tennessee-eastman/issues/42)
+- [#77 — Funcao de custo J observavel pelo Kubernetes (epic)](https://github.com/Green-Cinnamon-Labs/spec-tennessee-eastman/issues/77)
+- [#80 — Manifestos TEP e infra sem gRPC](https://github.com/Green-Cinnamon-Labs/spec-tennessee-eastman/issues/80)

@@ -1,0 +1,61 @@
+# Função de custo operacional do TEP — Downs & Vogel (1993), Tabela 9, p. 251.
+#
+#   J [$/h] = (Σ custo_i · x_purga_i)(44.79 · F_purga)          purga: kscmh → kgmol/h
+#           + (Σ custo_i · x_produto_i)(9.21 · F_produto)       produto (só D, E, F): m³/h → kgmol/h
+#           + 0.0536 · W_compressor + 0.0318 · F_vapor
+#
+# Cada termo vira `coefficient × Π signals`. O fator de unidade e a conversão mol% → fração (÷100)
+# ficam dentro do coeficiente, por exemplo purga A: 2.206 $/kgmol × 44.79 / 100 = 0.9880674.
+# B não tem custo. Na tabela de purga do artigo, a linha "D 0.04844 30.44" é um erro de impressão:
+# é o componente G.
+#
+# Valor no caso base: 170.6 $/h (verificado em tep-operator/internal/evaluate/evaluate_test.go).
+# Chaves de sinal = browse names OPC-UA publicados por tep-plant.
+apiVersion: supervision.greenlabs.io/v1alpha1
+kind: CostFunction
+metadata:
+  name: tep-downs-vogel
+spec:
+  unit: "$/h"
+  reference: 170.6
+  source: "Downs & Vogel (1993), A plant-wide industrial process control problem, Table 9"
+  terms:
+    # ── Purga (stream 9) ─────────────────────────────────────────────────────────────────────────
+    - name: purge.a
+      coefficient: 0.9880674    # 2.206 × 44.79 / 100
+      signals: [xmeas.stream9.flow_rate, xmeas.stream9.component.a]
+    - name: purge.c
+      coefficient: 2.7666783    # 6.177 × 44.79 / 100
+      signals: [xmeas.stream9.flow_rate, xmeas.stream9.component.c]
+    - name: purge.d
+      coefficient: 9.880674     # 22.06 × 44.79 / 100
+      signals: [xmeas.stream9.flow_rate, xmeas.stream9.component.d]
+    - name: purge.e
+      coefficient: 6.521424     # 14.56 × 44.79 / 100
+      signals: [xmeas.stream9.flow_rate, xmeas.stream9.component.e]
+    - name: purge.f
+      coefficient: 8.012931     # 17.89 × 44.79 / 100
+      signals: [xmeas.stream9.flow_rate, xmeas.stream9.component.f]
+    - name: purge.g
+      coefficient: 13.634076    # 30.44 × 44.79 / 100
+      signals: [xmeas.stream9.flow_rate, xmeas.stream9.component.g]
+    - name: purge.h
+      coefficient: 10.274826    # 22.94 × 44.79 / 100
+      signals: [xmeas.stream9.flow_rate, xmeas.stream9.component.h]
+    # ── Matéria-prima perdida no produto (stream 11) ─────────────────────────────────────────────
+    - name: product.d
+      coefficient: 2.031726     # 22.06 × 9.21 / 100
+      signals: [xmeas.stream11.flow_rate, xmeas.stream11.component.d]
+    - name: product.e
+      coefficient: 1.340976     # 14.56 × 9.21 / 100
+      signals: [xmeas.stream11.flow_rate, xmeas.stream11.component.e]
+    - name: product.f
+      coefficient: 1.647669     # 17.89 × 9.21 / 100
+      signals: [xmeas.stream11.flow_rate, xmeas.stream11.component.f]
+    # ── Utilidades ───────────────────────────────────────────────────────────────────────────────
+    - name: compressor
+      coefficient: 0.0536       # $/kWh
+      signals: [xmeas.compressor.work]
+    - name: steam
+      coefficient: 0.0318       # $/kg
+      signals: [xmeas.stripper.steam_flow_rate]

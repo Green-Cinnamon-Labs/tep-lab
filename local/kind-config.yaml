@@ -2,7 +2,7 @@
 # Cluster name: tep-lab
 #
 # A planta e o historian rodam fora do Kind (compose ou nativo).
-# O operator roda dentro do Kind e consulta o historian via host.docker.internal:8090.
+# O supervisor roda dentro do Kind e consulta o historian via host.docker.internal:8090.
 #
 # Uso: kind create cluster --config kind-config.yaml
 

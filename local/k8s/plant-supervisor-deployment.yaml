@@ -1,27 +1,27 @@
-# Deploy do operator supervisório (tep-operator).
+# Deploy do plant-supervisor.
 # Ele avalia cada Plant contra a OperatingPolicy ativa, lendo médias por janela do tep-historian
 # via HTTP. Não fala com a planta diretamente.
 
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: tep-operator
+  name: plant-supervisor
   labels:
-    app: tep-operator
+    app: plant-supervisor
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: tep-operator
+      app: plant-supervisor
   template:
     metadata:
       labels:
-        app: tep-operator
+        app: plant-supervisor
     spec:
-      serviceAccountName: tep-operator
+      serviceAccountName: plant-supervisor
       containers:
         - name: manager
-          image: tep-operator:latest
+          image: plant-supervisor:latest
           imagePullPolicy: Never   # imagem carregada via `kind load`
           ports:
             - containerPort: 8080
@@ -34,16 +34,16 @@ spec:
               cpu: "200m"
               memory: "128Mi"
 ---
-# ServiceAccount + RBAC mínimo (espelha tep-operator/config/rbac/role.yaml).
+# ServiceAccount + RBAC mínimo (espelha plant-supervisor/config/rbac/role.yaml).
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: tep-operator
+  name: plant-supervisor
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: tep-operator-role
+  name: plant-supervisor-role
 rules:
   - apiGroups: ["supervision.greenlabs.io"]
     resources: ["costfunctions", "operatingpolicies"]
@@ -65,12 +65,12 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: tep-operator-rolebinding
+  name: plant-supervisor-rolebinding
 subjects:
   - kind: ServiceAccount
-    name: tep-operator
+    name: plant-supervisor
     namespace: default
 roleRef:
   kind: ClusterRole
-  name: tep-operator-role
+  name: plant-supervisor-role
   apiGroup: rbac.authorization.k8s.io

@@ -1,5 +1,5 @@
-# A planta TEP vista pelo operator. O historian roda fora do Kind (docker compose ou nativo), e o
-# Pod do operator chega nele por host.docker.internal.
+# A planta TEP vista pelo supervisor. O historian roda fora do Kind (docker compose ou nativo), e o
+# Pod do supervisor chega nele por host.docker.internal.
 #
 # Trocar de política = trocar `policyRef` (kubectl edit plant tep).
 apiVersion: supervision.greenlabs.io/v1alpha1

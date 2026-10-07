@@ -8,7 +8,7 @@ Sao quatro pecas:
 |------|-----------|--------|
 | **tep-plant** | Docker ou nativo | Planta TEP (Rust). Publica sinais via OPC-UA na porta 4840. |
 | **tep-historian** | Docker ou nativo | Coleta os sinais via OPC-UA e serve medias por janela via HTTP na porta 8090. |
-| **tep-operator** | Pod dentro do Kind | Operator K8s (Go). Le a funcao de custo e a politica (CRDs), pede medias ao historian e grava o veredito no `status` do `Plant`. |
+| **plant-supervisor** | Pod dentro do Kind | Operator K8s (Go). Le a funcao de custo e a politica (CRDs), pede medias ao historian e grava o veredito no `status` do `Plant`. |
 | **tep-ihm** | Docker ou nativo | Dashboard (Python) na porta 8080. Sinais ao vivo via OPC-UA; veredito via API do K8s. |
 
 **Nenhuma cloud.** So Docker + Kind.
@@ -27,10 +27,10 @@ Sao quatro pecas:
 local/
 ├── docker-compose.yml               # Sobe planta + historian + IHM
 ├── kind-config.yaml                 # Config do cluster Kind
-├── setup.sh                         # Sobe o cluster, o operator e os manifestos TEP
+├── setup.sh                         # Sobe o cluster, o supervisor e os manifestos TEP
 ├── k8s/
-│   ├── crd.yaml                     # As 3 CRDs (copiadas de tep-operator/config/crd/bases/)
-│   ├── operator-deployment.yaml     # Deploy + RBAC do operator
+│   ├── crd.yaml                     # As 3 CRDs (copiadas de plant-supervisor/config/crd/bases/)
+│   ├── plant-supervisor-deployment.yaml     # Deploy + RBAC do supervisor
 │   └── tep/
 │       ├── cost-function-downs-vogel.yaml  # J de Downs & Vogel (1993), Tabela 9 — 12 termos
 │       ├── policy-mode1.yaml               # Modo 1: metas, restricoes (Tabela 6), orcamento
@@ -53,7 +53,7 @@ docker build -t tep-plant:latest <path-to-tep-plant>
 docker build -t tep-historian:latest <path-to-tep-historian>
 docker build -t tep-ihm:latest <path-to-tep-ihm>
 
-cd tep-supervisor/local/
+cd tep-lab/local/
 docker compose up
 ```
 
@@ -67,15 +67,15 @@ cd <path-to-tep-ihm>        && poetry run python src/server.py   # opcional
 
 Confira o historian: `curl localhost:8090/healthz` deve mostrar `"connected": true` e ~60 sinais.
 
-### 2. Kind + operator + manifestos TEP
+### 2. Kind + supervisor + manifestos TEP
 
 ```bash
-docker build -t tep-operator:latest <path-to-tep-operator>
-cd tep-supervisor/local/
+docker build -t plant-supervisor:latest <path-to-plant-supervisor>
+cd tep-lab/local/
 bash setup.sh
 ```
 
-O script cria o cluster `tep-lab`, carrega a imagem do operator, aplica as CRDs, deploya o operator e aplica `k8s/tep/`.
+O script cria o cluster `tep-lab`, carrega a imagem do supervisor, aplica as CRDs, deploya o supervisor e aplica `k8s/tep/`.
 
 ### 3. Verificar
 
@@ -100,14 +100,14 @@ kubectl edit operatingpolicy tep-mode1     # ex.: baixar maxCost para 150 → Co
 kubectl edit plant tep                     # trocar policyRef para outra OperatingPolicy
 ```
 
-O operator reavalia na hora. O veredito so vira `NonCompliant` depois de `persistenceEvaluations` avaliacoes ruins seguidas.
+O supervisor reavalia na hora. O veredito so vira `NonCompliant` depois de `persistenceEvaluations` avaliacoes ruins seguidas.
 
 ### Atualizar as CRDs
 
-Se os types mudarem em `tep-operator`, regenere la (`make generate manifests`) e copie:
+Se os types mudarem em `plant-supervisor`, regenere la (`make generate manifests`) e copie:
 
 ```bash
-cat <path-to-tep-operator>/config/crd/bases/supervision.greenlabs.io_*.yaml > k8s/crd.yaml
+cat <path-to-plant-supervisor>/config/crd/bases/supervision.greenlabs.io_*.yaml > k8s/crd.yaml
 ```
 
 ---
@@ -120,10 +120,10 @@ Host (Docker Desktop)
 ├── tep-historian  (:8090)   ← compose ou nativo, le a planta via OPC-UA
 ├── tep-ihm        (:8080)   ← compose ou nativo
 └── tep-lab-control-plane    ← container Kind
-    └── tep-operator (Pod)   ← chama http://host.docker.internal:8090
+    └── plant-supervisor (Pod)   ← chama http://host.docker.internal:8090
 ```
 
-- O **operator** (dentro do Kind) so fala com o historian, nunca com a planta. Chega nele por `host.docker.internal:8090`, porque a porta 8090 esta exposta no host.
+- O **supervisor** (dentro do Kind) so fala com o historian, nunca com a planta. Chega nele por `host.docker.internal:8090`, porque a porta 8090 esta exposta no host.
 - A **IHM** le os sinais direto da planta (OPC-UA) e o veredito pela API do Kind (`K8S_SERVER=https://host.docker.internal:6443` quando roda em container).
 
 ---
@@ -132,7 +132,7 @@ Host (Docker Desktop)
 
 ```bash
 docker compose down                         # parar planta + historian + IHM
-kubectl logs -f deploy/tep-operator         # logs do operator (uma linha por avaliacao)
+kubectl logs -f deploy/plant-supervisor         # logs do supervisor (uma linha por avaliacao)
 kubectl get costfunctions,operatingpolicies
 kubectl get plant tep -o yaml               # status completo: termos de J, metas, restricoes
 kind delete cluster --name tep-lab          # destruir o cluster

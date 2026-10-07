@@ -9,7 +9,7 @@
 # B não tem custo. Na tabela de purga do artigo, a linha "D 0.04844 30.44" é um erro de impressão:
 # é o componente G.
 #
-# Valor no caso base: 170.6 $/h (verificado em tep-operator/internal/evaluate/evaluate_test.go).
+# Valor no caso base: 170.6 $/h (verificado em plant-supervisor/internal/evaluate/evaluate_test.go).
 # Chaves de sinal = browse names OPC-UA publicados por tep-plant.
 apiVersion: supervision.greenlabs.io/v1alpha1
 kind: CostFunction

@@ -2,11 +2,11 @@
 # docker compose up -d     — sobe em background
 # docker compose down      — para tudo
 #
-# O Kind (tep-operator) continua sendo gerenciado pelo setup.sh,
+# O Kind (plant-supervisor) continua sendo gerenciado pelo setup.sh,
 # porque é um cluster Kubernetes e não um container simples.
 #
 # Fluxo de dados:
-#   tep-plant ──OPC-UA :4840──▶ tep-historian ──HTTP :8090──▶ tep-operator (Kind)
+#   tep-plant ──OPC-UA :4840──▶ tep-historian ──HTTP :8090──▶ plant-supervisor (Kind)
 #   tep-plant ──OPC-UA :4840──▶ tep-ihm (sinais ao vivo)
 #   Kubernetes API ───────────▶ tep-ihm (veredito: Plant.status)
 
@@ -21,7 +21,7 @@ services:
     image: tep-historian:latest
     container_name: tep-historian
     ports:
-      - "8090:8090"   # exposta no host: o operator no Kind chega por host.docker.internal:8090
+      - "8090:8090"   # exposta no host: o supervisor no Kind chega por host.docker.internal:8090
     environment:
       - OPCUA_ENDPOINT=opc.tcp://tep-plant:4840/tep/server/
       - SAMPLE_INTERVAL_MS=500

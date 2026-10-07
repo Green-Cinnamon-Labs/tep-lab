@@ -1,7 +1,7 @@
 # Lab K8s Supervisor
 
 Infrastructure repository for the **Tennessee Eastman CPS Lab** project.
-Contains cluster configurations, deployment manifests, and setup scripts for running the TEP plant + supervisory operator across different environments.
+Contains cluster configurations, deployment manifests, and setup scripts for running the TEP plant, the historian and the supervisory operator across different environments. It also holds the TEP-specific manifests the operator evaluates: the Downs & Vogel cost function and the mode 1 operating policy (`local/k8s/tep/`).
 
 ## Environments
 
@@ -29,8 +29,9 @@ Full details in [`local/README.md`](local/README.md).
 
 | Repo | Description |
 |------|-----------|
-| [tep-plant](https://github.com/Green-Cinnamon-Labs/tep-plant) | TEP plant (Rust simulation + gRPC) |
-| [tep-operator](https://github.com/Green-Cinnamon-Labs/tep-operator) | Supervisory operator (Go + controller-runtime) |
+| [tep-plant](https://github.com/Green-Cinnamon-Labs/tep-plant) | TEP plant (Rust simulation, signals over OPC-UA) |
+| tep-historian | OPC-UA collector, window statistics over HTTP |
+| [tep-operator](https://github.com/Green-Cinnamon-Labs/tep-operator) | Supervisory operator (Go + controller-runtime): evaluates the declared cost function and policy |
 
 ## Note
 

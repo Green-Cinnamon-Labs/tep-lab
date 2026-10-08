@@ -4,13 +4,18 @@
 #   ±5 % que o artigo usa para variabilidade aceitável do produto. A razão G/H 50/50 do Modo 1 não
 #   é um sinal único, então é expressa como metas em G e H separadamente.
 # - Restrições: limites normais de operação da Tabela 6 (não os de shutdown).
-# - Orçamento de custo: escolha de política, não do artigo — 5 % acima da referência de 170.6 $/h.
+# - Orçamento de custo: 170.6 $/h, o custo do caso base de Downs & Vogel (Tabela 9). Calibrado em
+#   2026-10-08 (bloco 6 da #85): J nominal = 166.83 ± 0.18 $/h, então J precisa subir ~2.3 % para
+#   estourar. Antes era 179 (escolha arbitrária, 7 % acima do nominal).
 # - Malhas de controle (segundo nível de observação, spec #85): os 3 controladores P do TEP, julgados
 #   pelo Predictability Index de Bradu et al. (2017) num veredito separado (ControlLoopsHealthy). Os
-#   setpoints são as constantes do código da planta (tep-plant/src/controllers/). Limiares PROVISÓRIOS
-#   (calibração no bloco 6 da #85), tirados do que se mediu em operação nominal com ruído:
-#   níveis com PI ≈ 0.2 e σ da válvula ≈ 0.3 %, pressão com σ da válvula ≈ 0.008 % (fica fora do
-#   portão, ver #86). Os limiares do artigo (PI_L 0.4, σ̄_y 1 %) não se transferem (#87).
+#   setpoints são as constantes do código da planta (tep-plant/src/controllers/). Limiares
+#   calibrados em 2026-10-08 (bloco 6 da #85), operação nominal com ruído, velocidade 5, 41 avaliações
+#   (tep-lab/data/experiment_82/calibracao_2026-10-08.csv):
+#   - níveis: PI entre 0.147 e 0.40 → minPredictability 0.12 (abaixo do mínimo, com margem);
+#     σ da válvula 0.28–0.34 % → passam folgados no portão de 0.05 %.
+#   - pressão: σ da válvula 0.012–0.015 % → fica abaixo do portão de 0.05 % e não é julgada (#86).
+#   Os limiares do artigo (PI_L 0.4, σ̄_y 1 %) não se transferem (#87).
 apiVersion: supervision.greenlabs.io/v1alpha1
 kind: OperatingPolicy
 metadata:
@@ -19,7 +24,7 @@ spec:
   costFunctionRef: tep-downs-vogel
   description: "Downs & Vogel mode 1 (base case): 50/50 G/H, product 22.949 m³/h"
   windowSeconds: 60
-  maxCost: 179.0
+  maxCost: 170.6
   persistenceEvaluations: 3
   targets:
     - signal: xmeas.stream11.flow_rate      # XMEAS(17), m³/h
@@ -56,19 +61,19 @@ spec:
       setpoint: 2705
       op: valve.purge.position                # XMV(6), %
       timeConstantSeconds: 30
-      minPredictability: 0.1                  # provisório
-      minOutputStd: 0.05                      # provisório; a válvula de purga varia ~0.008 %
+      minPredictability: 0.12
+      minOutputStd: 0.05                      # a válvula de purga varia 0.012–0.015 %: não é julgada
     - name: separator_level
       pv: xmeas.separator.level               # XMEAS(12), %
       setpoint: 50
       op: valve.separator_underflow.position  # XMV(7), %
       timeConstantSeconds: 30
-      minPredictability: 0.1                  # provisório
-      minOutputStd: 0.05                      # provisório
+      minPredictability: 0.12
+      minOutputStd: 0.05
     - name: stripper_level
       pv: xmeas.stripper.level                # XMEAS(15), %
       setpoint: 50
       op: valve.stripper_product.position     # XMV(8), %
       timeConstantSeconds: 30
-      minPredictability: 0.1                  # provisório
-      minOutputStd: 0.05                      # provisório
+      minPredictability: 0.12
+      minOutputStd: 0.05

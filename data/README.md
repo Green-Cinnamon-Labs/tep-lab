@@ -13,6 +13,14 @@ Dados gerados pelo laboratório: séries de simulação (CSV) e os gráficos fei
 
 O gráfico que ficava dentro do próprio pacote de análise (`analysis/docs/simulations/plots/simulation_log.png` no spec) está em `../analysis/plots/`.
 
+## experiment_82/
+
+Gravações do experimento #82 (função de custo e qualidade das malhas sob distúrbio), feitas com `../local/scripts/record_run.py` e resumidas com `../local/scripts/summarize_run.py`.
+
+| Arquivo | O que é |
+|---|---|
+| `calibracao_2026-10-08.csv` | Operação nominal com ruído, sem distúrbio, velocidade 5 (≈10× o tempo real), `clock.t_h` 1.75 → 5.06 h, 41 avaliações do supervisor. Base dos limiares da política Modo 1 (bloco 6 da spec #85). |
+
 ## Como plotar
 
 Com o pacote em `../analysis/`:

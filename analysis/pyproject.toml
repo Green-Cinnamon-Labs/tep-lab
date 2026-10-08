@@ -10,6 +10,7 @@ dependencies = [
 
 [project.scripts]
 plot = "tep_analysis.plot:main"
+run-timeline = "tep_analysis.run_timeline:main"
 
 [build-system]
 requires = ["hatchling"]

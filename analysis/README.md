@@ -59,3 +59,14 @@ A imagem do plot é salva ao lado do CSV, com extensão `.png`.
 Exemplo:
 - `../tennessee-eastman-service/simulation_log.csv`
 - `../tennessee-eastman-service/simulation_log.png`
+
+## Linha do tempo de uma rodada (`run-timeline`)
+
+Para as gravações feitas com `../local/scripts/record_run.py` (calibração e experimento #82): um gráfico com quatro painéis no tempo simulado (`clock.t_h`) — custo J contra o orçamento, as conditions do veredito como faixas, o Predictability Index de cada malha contra o limiar, e o σ da válvula contra o portão.
+
+```bash
+poetry install
+poetry run run-timeline ../data/experiment_82/idv6_2026-10-08.csv     --mark 3.21:"IDV6 ligado" --mark 10.3:"IDV6 desligado"
+```
+
+O PNG sai ao lado do CSV. `--pi-threshold` e `--gate` devem bater com `minPredictability` e `minOutputStd` da política (padrão 0.12 e 0.05).

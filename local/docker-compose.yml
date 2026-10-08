@@ -24,8 +24,8 @@ services:
       - "8090:8090"   # exposta no host: o supervisor no Kind chega por host.docker.internal:8090
     environment:
       - OPCUA_ENDPOINT=opc.tcp://tep-plant:4840/tep/server/
-      - SAMPLE_INTERVAL_MS=500
-      - RETENTION_S=3600
+      - SAMPLE_INTERVAL_MS=100   # planta na velocidade 5 = um tick a cada 100 ms (spec #85, bloco 6)
+      - RETENTION_S=900
     depends_on:
       - tep-plant
 

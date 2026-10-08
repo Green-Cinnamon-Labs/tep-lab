@@ -22,7 +22,7 @@ spec:
   terms:
     # ── Purga (stream 9) ─────────────────────────────────────────────────────────────────────────
     - name: purge.a
-      coefficient: 0.9880674    # 2.206 × 44.79 / 100
+      coefficient: 0.9880674    # 2.206 (price of A) × 44.79(kgmol/h factor) / 100 (fraction step)
       signals: [xmeas.stream9.flow_rate, xmeas.stream9.component.a]
     - name: purge.c
       coefficient: 2.7666783    # 6.177 × 44.79 / 100

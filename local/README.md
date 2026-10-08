@@ -87,11 +87,20 @@ kubectl describe plant tep
 Esperado (em ate ~30 s):
 
 ```
-NAME   POLICY      COST     UNIT   PHASE       AGE
-tep    tep-mode1   166.39   $/h    Compliant   1m
+NAME   POLICY      COST     UNIT   PHASE       LOOPS   AGE
+tep    tep-mode1   166.39   $/h    Compliant   True    1m
 ```
 
 Se a fase ficar `Pending`, a condition `DataAvailable` diz o motivo (`HistorianUnreachable`, `PlantDisconnected`, `MissingSignals`, `PolicyNotFound`...).
+
+A coluna `LOOPS` e o segundo nivel de observacao (spec #85): a qualidade das 3 malhas de controle, pelo Predictability Index de Bradu et al. Ela e separada da `PHASE` (a fase so reflete o veredito economico). Para ver cada malha:
+
+```bash
+kubectl get plant tep -o jsonpath='{range .status.loops[*]}{.name}: PI={.predictability} evaluated={.evaluated} healthy={.healthy} {.reason}{"
+"}{end}'
+```
+
+Em operacao nominal a malha de pressao do reator aparece `evaluated=false` (`OutputBelowGate`): a valvula de purga quase nao se mexe, entao ela fica fora do julgamento (spec #86). Os limiares das malhas em `policy-mode1.yaml` sao provisorios ate a calibracao.
 
 ### 4. Trocar de politica ou mexer no orcamento
 

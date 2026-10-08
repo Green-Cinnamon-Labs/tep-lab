@@ -3,6 +3,15 @@
 Infrastructure repository for the **Tennessee Eastman CPS Lab** project.
 Contains cluster configurations, deployment manifests, and setup scripts for running the TEP plant, the historian and the plant supervisor across different environments. It also holds the TEP-specific manifests the supervisor evaluates: the Downs & Vogel cost function and the mode 1 operating policy (`local/k8s/tep/`).
 
+## Data and analysis
+
+| Directory | Content |
+|-----------|---------|
+| [`data/`](data/) | Lab data: simulation series (CSV) and their plots, one per experiment. See [`data/README.md`](data/README.md). |
+| [`analysis/`](analysis/) | Python package to plot the simulation series (`poetry run plot --csv ../data/simulations/...`). |
+
+Both moved here from `spec-tennessee-eastman` (2026-10-08), which now holds only documentation and issue discussions.
+
 ## Environments
 
 | Directory | Environment | Status |

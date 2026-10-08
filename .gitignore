@@ -16,3 +16,6 @@ terraform.tfstate.backup
 
 # Arquivos temporários do editor
 *_deprecated*
+# Python
+__pycache__/
+.venv/

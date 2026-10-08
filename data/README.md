@@ -23,6 +23,8 @@ Gravações do experimento #82 (função de custo e qualidade das malhas sob dis
 | `calibracao_2026-10-08.png` | Linha do tempo dessa rodada (`analysis/` → `poetry run run-timeline`). |
 | `idv6_2026-10-08.csv` | Experimento 25: IDV6 ligado em `clock.t_h` 2.31 e desligado em 3.84, regras fixas (política calibrada), velocidade 5; 44 avaliações. |
 | `idv6_2026-10-08.png` | Linha do tempo dessa rodada, com os marcos de liga/desliga. |
+| `idv6_maxoffset_2026-10-08.csv` | Experimento 26: mesma rodada com o critério de seguimento de setpoint (`maxOffset`); IDV6 ligado em 2.02 e desligado em 3.22; 35 avaliações. |
+| `idv6_maxoffset_2026-10-08.png` | Linha do tempo dessa rodada. |
 
 ## Como plotar
 

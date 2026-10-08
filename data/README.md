@@ -21,6 +21,8 @@ Gravações do experimento #82 (função de custo e qualidade das malhas sob dis
 |---|---|
 | `calibracao_2026-10-08.csv` | Operação nominal com ruído, sem distúrbio, velocidade 5 (≈10× o tempo real), `clock.t_h` 1.75 → 5.06 h, 41 avaliações do supervisor. Base dos limiares da política Modo 1 (bloco 6 da spec #85). |
 | `calibracao_2026-10-08.png` | Linha do tempo dessa rodada (`analysis/` → `poetry run run-timeline`). |
+| `idv6_2026-10-08.csv` | Experimento 25: IDV6 ligado em `clock.t_h` 2.31 e desligado em 3.84, regras fixas (política calibrada), velocidade 5; 44 avaliações. |
+| `idv6_2026-10-08.png` | Linha do tempo dessa rodada, com os marcos de liga/desliga. |
 
 ## Como plotar
 

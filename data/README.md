@@ -20,6 +20,7 @@ Gravações do experimento #82 (função de custo e qualidade das malhas sob dis
 | Arquivo | O que é |
 |---|---|
 | `calibracao_2026-10-08.csv` | Operação nominal com ruído, sem distúrbio, velocidade 5 (≈10× o tempo real), `clock.t_h` 1.75 → 5.06 h, 41 avaliações do supervisor. Base dos limiares da política Modo 1 (bloco 6 da spec #85). |
+| `calibracao_2026-10-08.png` | Linha do tempo dessa rodada (`analysis/` → `poetry run run-timeline`). |
 
 ## Como plotar
 

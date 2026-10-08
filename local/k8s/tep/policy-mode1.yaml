@@ -16,6 +16,11 @@
 #     σ da válvula 0.28–0.34 % → passam folgados no portão de 0.05 %.
 #   - pressão: σ da válvula 0.012–0.015 % → fica abaixo do portão de 0.05 % e não é julgada (#86).
 #   Os limiares do artigo (PI_L 0.4, σ̄_y 1 %) não se transferem (#87).
+# - Seguimento de setpoint (maxOffset, Experimento 26): o índice de Bradu mede se o erro é previsível,
+#   não se a malha segura o alvo — no Experimento 25 a pressão ficou 131 kPa acima do setpoint com
+#   PI ≈ 1. maxOffset faz o papel do alarme de desvio que o método pressupõe. Escolhido sobre as
+#   gravações de 2026-10-08: nenhum dispara em operação nominal; no Exp 25 teriam disparado em
+#   t ≈ 3.13 (separador), 3.19 (stripper) e 3.80 (pressão) — os níveis antes do veredito econômico.
 apiVersion: supervision.greenlabs.io/v1alpha1
 kind: OperatingPolicy
 metadata:
@@ -63,6 +68,7 @@ spec:
       timeConstantSeconds: 30
       minPredictability: 0.12
       minOutputStd: 0.05                      # a válvula de purga varia 0.012–0.015 %: não é julgada
+      maxOffset: 20                           # kPa; offset nominal do controle P ~9.5
     - name: separator_level
       pv: xmeas.separator.level               # XMEAS(12), %
       setpoint: 50
@@ -70,6 +76,7 @@ spec:
       timeConstantSeconds: 30
       minPredictability: 0.12
       minOutputStd: 0.05
+      maxOffset: 1.0                          # %; offset nominal até 0.17
     - name: stripper_level
       pv: xmeas.stripper.level                # XMEAS(15), %
       setpoint: 50
@@ -77,3 +84,4 @@ spec:
       timeConstantSeconds: 30
       minPredictability: 0.12
       minOutputStd: 0.05
+      maxOffset: 1.0                          # %; offset nominal até 0.13

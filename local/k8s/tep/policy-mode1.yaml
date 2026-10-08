@@ -5,6 +5,12 @@
 #   é um sinal único, então é expressa como metas em G e H separadamente.
 # - Restrições: limites normais de operação da Tabela 6 (não os de shutdown).
 # - Orçamento de custo: escolha de política, não do artigo — 5 % acima da referência de 170.6 $/h.
+# - Malhas de controle (segundo nível de observação, spec #85): os 3 controladores P do TEP, julgados
+#   pelo Predictability Index de Bradu et al. (2017) num veredito separado (ControlLoopsHealthy). Os
+#   setpoints são as constantes do código da planta (tep-plant/src/controllers/). Limiares PROVISÓRIOS
+#   (calibração no bloco 6 da #85), tirados do que se mediu em operação nominal com ruído:
+#   níveis com PI ≈ 0.2 e σ da válvula ≈ 0.3 %, pressão com σ da válvula ≈ 0.008 % (fica fora do
+#   portão, ver #86). Os limiares do artigo (PI_L 0.4, σ̄_y 1 %) não se transferem (#87).
 apiVersion: supervision.greenlabs.io/v1alpha1
 kind: OperatingPolicy
 metadata:
@@ -39,3 +45,30 @@ spec:
     - signal: xmeas.stripper.level          # XMEAS(15), %
       min: 30
       max: 100
+
+  # ── Malhas de controle (segundo nível) ──────────────────────────────────────────────────────────
+  loopWindowSeconds: 300            # t_W: janela do índice
+  loopSampleIntervalSeconds: 1      # t_s: o historian reamostra as séries para este passo
+  loopPersistenceEvaluations: 3     # N de Bradu
+  controlLoops:
+    - name: reactor_pressure
+      pv: xmeas.reactor.pressure              # XMEAS(7), kPa
+      setpoint: 2705
+      op: valve.purge.position                # XMV(6), %
+      timeConstantSeconds: 30
+      minPredictability: 0.1                  # provisório
+      minOutputStd: 0.05                      # provisório; a válvula de purga varia ~0.008 %
+    - name: separator_level
+      pv: xmeas.separator.level               # XMEAS(12), %
+      setpoint: 50
+      op: valve.separator_underflow.position  # XMV(7), %
+      timeConstantSeconds: 30
+      minPredictability: 0.1                  # provisório
+      minOutputStd: 0.05                      # provisório
+    - name: stripper_level
+      pv: xmeas.stripper.level                # XMEAS(15), %
+      setpoint: 50
+      op: valve.stripper_product.position     # XMV(8), %
+      timeConstantSeconds: 30
+      minPredictability: 0.1                  # provisório
+      minOutputStd: 0.05                      # provisório

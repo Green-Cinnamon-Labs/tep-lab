@@ -189,6 +189,63 @@ spec:
                 x-kubernetes-list-map-keys:
                 - signal
                 x-kubernetes-list-type: map
+              controlLoops:
+                description: |-
+                  ControlLoops are judged separately from the economic verdict (condition ControlLoopsHealthy,
+                  never PolicyCompliant): the two observation levels stay side by side.
+                items:
+                  description: |-
+                    ControlLoop declares one control loop whose quality is monitored with the Predictability Index
+                    of Bradu et al. (2017): how much of the loop error SP − PV an autoregressive model can predict.
+                    The historian computes the index; the supervisor judges it against the thresholds below.
+                  properties:
+                    minOutputStd:
+                      description: |-
+                        MinOutputStd is the variability gate σ̄_y: the loop is only judged when the standard
+                        deviation of its controller output is above it (a saturated, idle or manual loop is not).
+                      minimum: 0
+                      type: number
+                    minPredictability:
+                      description: 'MinPredictability is the threshold PI_L: below
+                        it the loop is considered poorly tuned.'
+                      maximum: 1
+                      minimum: 0
+                      type: number
+                    name:
+                      description: Name identifies the loop in status (e.g. "reactor_pressure").
+                      minLength: 1
+                      type: string
+                    op:
+                      description: OP is the historian key of the controller output
+                        (e.g. the valve position).
+                      minLength: 1
+                      type: string
+                    pv:
+                      description: PV is the historian key of the measured variable.
+                      minLength: 1
+                      type: string
+                    setpoint:
+                      description: Setpoint of the loop, in the PV's unit.
+                      type: number
+                    timeConstantSeconds:
+                      description: |-
+                        TimeConstantSeconds is the closed-loop settling time T; it sets the prediction horizon
+                        b = ceil(T / t_s).
+                      format: int32
+                      minimum: 1
+                      type: integer
+                  required:
+                  - minPredictability
+                  - name
+                  - op
+                  - pv
+                  - setpoint
+                  - timeConstantSeconds
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
               costFunctionRef:
                 description: CostFunctionRef names a CostFunction in the same namespace.
                 minLength: 1
@@ -197,6 +254,28 @@ spec:
                 description: Description is free text (e.g. "Downs & Vogel mode 1,
                   base case").
                 type: string
+              loopPersistenceEvaluations:
+                default: 3
+                description: |-
+                  LoopPersistenceEvaluations is how many consecutive evaluations with an unhealthy loop are
+                  needed before ControlLoopsHealthy turns False (Bradu's N).
+                format: int32
+                minimum: 1
+                type: integer
+              loopSampleIntervalSeconds:
+                default: 1
+                description: LoopSampleIntervalSeconds is the sampling time t_s the
+                  historian resamples the series to.
+                format: int32
+                minimum: 1
+                type: integer
+              loopWindowSeconds:
+                default: 300
+                description: LoopWindowSeconds is the time window t_W over which each
+                  loop's index is computed.
+                format: int32
+                minimum: 1
+                type: integer
               maxCost:
                 description: MaxCost is the budget for J. Omitted means J is observed
                   but not judged.
@@ -276,6 +355,9 @@ spec:
       type: string
     - jsonPath: .status.phase
       name: Phase
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="ControlLoopsHealthy")].status
+      name: Loops
       type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
@@ -391,6 +473,11 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              consecutiveLoopViolations:
+                description: ConsecutiveLoopViolations counts consecutive evaluations
+                  with at least one unhealthy loop.
+                format: int32
+                type: integer
               consecutiveViolations:
                 description: ConsecutiveViolations counts consecutive failing evaluations
                   under ActivePolicy.
@@ -429,6 +516,45 @@ spec:
               lastEvaluationTime:
                 format: date-time
                 type: string
+              loops:
+                description: Loops is the per-loop result of the second observation
+                  level.
+                items:
+                  description: LoopStatus is the quality of one control loop in the
+                    last evaluation.
+                  properties:
+                    evaluated:
+                      description: |-
+                        Evaluated is false when the loop could not be judged: no index (e.g. too few samples) or
+                        controller output below the variability gate.
+                      type: boolean
+                    healthy:
+                      description: Healthy is false only for an evaluated loop with
+                        Predictability below its threshold.
+                      type: boolean
+                    name:
+                      type: string
+                    offset:
+                      description: Offset is the mean loop error SP − PV (a proportional
+                        controller keeps one).
+                      type: number
+                    outputStd:
+                      description: OutputStd is the standard deviation of the controller
+                        output over the window.
+                      type: number
+                    predictability:
+                      description: Predictability is the Predictability Index PI (0–1)
+                        of the loop error's fluctuation.
+                      type: number
+                    reason:
+                      description: Reason explains Evaluated=false or Healthy=false.
+                      type: string
+                  required:
+                  - evaluated
+                  - healthy
+                  - name
+                  type: object
+                type: array
               phase:
                 description: PlantPhase summarizes the verdict.
                 enum:

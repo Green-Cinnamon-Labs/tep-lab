@@ -26,6 +26,31 @@ Gravações do experimento #82 (função de custo e qualidade das malhas sob dis
 | `idv6_maxoffset_2026-10-08.csv` | Experimento 26: mesma rodada com o critério de seguimento de setpoint (`maxOffset`); IDV6 ligado em 2.02 e desligado em 3.22; 35 avaliações. |
 | `idv6_maxoffset_2026-10-08.png` | Linha do tempo dessa rodada. |
 
+## experiment_89/
+
+Gravações do Experimento 27 (spec #89): malhas PI em operação nominal, sem distúrbio, e o controle com malhas P. O registro do supervisor é feito com `../local/scripts/record_run.py`; os sinais da planta, que o `Plant.status` não traz (nível do reator, composições, válvulas), com `../local/scripts/record_signals.py`, lendo o historian.
+
+| Arquivo | O que é |
+|---|---|
+| `pi_nominal_2026-10-10.csv` | Rodada 1: malhas PI, velocidade 5 (≈10× o tempo real), `clock.t_h` 0.03 → 9.97 h, 122 avaliações do supervisor. |
+| `pi_nominal_2026-10-10.png` | Linha do tempo dessa rodada (`run-timeline`, com o painel de offset). |
+| `pi_nominal_longo_2026-10-10.csv` | Rodada 2: malhas PI, velocidade 30 (≈56×), `clock.t_h` 0.16 → 32.83 h, até a perda da planta; 70 avaliações. |
+| `pi_nominal_longo_2026-10-10.png` | Linha do tempo do supervisor nessa rodada. |
+| `pi_nominal_longo_sinais_2026-10-10.csv` | Sinais da planta na rodada 2, `clock.t_h` 0.02 → 32.92 h, uma linha a cada 10 s de relógio (≈9 min simulados). |
+| `pi_nominal_longo_sinais_2026-10-10.png` | Linha do tempo desses sinais (`signals-timeline`). |
+| `pi_nominal_longo_sinais_final_2026-10-10.png` | Os mesmos sinais a partir de `clock.t_h` 28.5: o colapso em detalhe. |
+| `p_controle_2026-10-11.csv` | Controle: malhas P (integral congelada), velocidade 30, `clock.t_h` 1.15 → 40.26 h; 84 avaliações. |
+| `p_controle_2026-10-11.png` | Linha do tempo do supervisor no controle. |
+| `p_controle_sinais_2026-10-11.csv` | Sinais da planta no controle, `clock.t_h` 0.01 → 40.5 h. |
+| `pi_vs_p_sinais_2026-10-11.png` | Rodada 2 (PI) e controle (P) sobrepostos nos mesmos eixos — a figura principal do experimento. |
+
+Para refazer as figuras, de dentro de `../analysis/`:
+
+```bash
+poetry run run-timeline ../data/experiment_89/pi_nominal_longo_2026-10-10.csv --max-offset reactor_pressure=20 --max-offset separator_level=1 --max-offset stripper_level=1
+poetry run signals-timeline ../data/experiment_89/pi_nominal_longo_sinais_2026-10-10.csv ../data/experiment_89/p_controle_sinais_2026-10-11.csv --label PI --label P --out ../data/experiment_89/pi_vs_p_sinais_2026-10-11.png
+```
+
 ## Como plotar
 
 Com o pacote em `../analysis/`:

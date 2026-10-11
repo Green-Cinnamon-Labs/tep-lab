@@ -43,6 +43,7 @@ Gravações do Experimento 27 (spec #89): malhas PI em operação nominal, sem d
 | `p_controle_2026-10-11.png` | Linha do tempo do supervisor no controle. |
 | `p_controle_sinais_2026-10-11.csv` | Sinais da planta no controle, `clock.t_h` 0.01 → 40.5 h. |
 | `pi_vs_p_sinais_2026-10-11.png` | Rodada 2 (PI) e controle (P) sobrepostos nos mesmos eixos — a figura principal do experimento. |
+| `pi_vs_p_quem_flutua_2026-10-11.png` | A mesma comparação só até `clock.t_h` 30 (antes do colapso), com a pressão em escala fina: com P quem se move é a pressão, com PI é a purga. |
 
 Para refazer as figuras, de dentro de `../analysis/`:
 

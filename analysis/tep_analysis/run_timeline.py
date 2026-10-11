@@ -1,13 +1,16 @@
 """
 run_timeline.py — linha do tempo de uma rodada gravada pelo `local/scripts/record_run.py`.
 
-Um gráfico com quatro painéis, todos no tempo simulado da planta (`clock.t_h`):
+Um gráfico com cinco painéis, todos no tempo simulado da planta (`clock.t_h`):
 
 1. custo J contra o orçamento (`maxCost`) da política;
 2. as conditions do veredito como faixas (verde True, vermelho False, cinza Unknown);
 3. o Predictability Index de cada malha contra o limiar (`--pi-threshold`); pontos vazados são
    avaliações em que a malha não foi julgada (abaixo do portão ou sem índice);
-4. o σ da válvula de cada malha contra o portão de variabilidade (`--gate`), em escala log.
+4. o offset de cada malha (setpoint − média da PV na janela), o critério de seguimento de setpoint;
+   com `--max-offset` para todas as malhas, vem dividido pelo limite de cada uma (±1 = `maxOffset`).
+   Só aparece se a gravação tiver a coluna de offset;
+5. o σ da válvula de cada malha contra o portão de variabilidade (`--gate`), em escala log.
 
 Marcos (`--mark 3.21:"IDV6 ligado"`) viram linhas verticais em todos os painéis — use para o instante
 em que um distúrbio foi ligado e desligado.
@@ -53,11 +56,18 @@ def parse_mark(text: str) -> tuple[float, str]:
     return float(t), label or t
 
 
-def plot(df: pd.DataFrame, out: Path, pi_threshold: float, gate: float, marks: list[tuple[float, str]], title: str) -> None:
+def plot(df: pd.DataFrame, out: Path, pi_threshold: float, gate: float, marks: list[tuple[float, str]], title: str,
+         max_offset: dict[str, float] | None = None) -> None:
     loops = loop_names(df)
     t = df["sim_t_h"]
-    fig, axes = plt.subplots(4, 1, figsize=(12, 11), sharex=True, gridspec_kw={"height_ratios": [3, 1.6, 3, 2]})
-    ax_j, ax_c, ax_pi, ax_sd = axes
+    max_offset = max_offset or {}
+    with_offset = any(f"{name}.offset" in df and df[f"{name}.offset"].notna().any() for name in loops)
+    ratios = [3, 1.6, 3, 2.4, 2] if with_offset else [3, 1.6, 3, 2]
+    fig, axes = plt.subplots(len(ratios), 1, figsize=(12, 13.4 if with_offset else 11), sharex=True,
+                             gridspec_kw={"height_ratios": ratios})
+    ax_j, ax_c, ax_pi = axes[:3]
+    ax_off = axes[3] if with_offset else None
+    ax_sd = axes[-1]
 
     # 1. J
     ax_j.plot(t, df["cost"], color="#1f77b4", lw=1.6, label="J")
@@ -91,7 +101,22 @@ def plot(df: pd.DataFrame, out: Path, pi_threshold: float, gate: float, marks: l
     ax_pi.legend(loc="upper left", fontsize=8, ncol=2)
     ax_pi.grid(alpha=0.3)
 
-    # 4. σ da válvula
+    # 4. offset por malha (seguimento de setpoint)
+    if ax_off is not None:
+        normalized = all(name in max_offset for name in loops)
+        for name in loops:
+            ax_off.plot(t, df[f"{name}.offset"] / (max_offset[name] if normalized else 1.0), lw=1.2, label=name)
+        ax_off.axhline(0, color="#9e9e9e", lw=0.8)
+        if normalized:
+            ax_off.axhline(1, color="#ef5350", ls="--", lw=1.2, label="maxOffset")
+            ax_off.axhline(-1, color="#ef5350", ls="--", lw=1.2)
+            ax_off.set_ylabel("offset / maxOffset")
+        else:
+            ax_off.set_ylabel("offset (unidade da PV)")
+        ax_off.legend(loc="upper right", fontsize=8, ncol=2)
+        ax_off.grid(alpha=0.3)
+
+    # 5. σ da válvula
     for name in loops:
         ax_sd.plot(t, df[f"{name}.output_std"], lw=1.2, label=name)
     ax_sd.axhline(gate, color="#ef5350", ls="--", lw=1.2, label=f"minOutputStd {gate:g}")
@@ -121,12 +146,15 @@ def main() -> None:
     ap.add_argument("--gate", type=float, default=0.05, help="minOutputStd da política, em %% (default 0.05)")
     ap.add_argument("--mark", action="append", default=[], metavar="T:ROTULO",
                     help="marco vertical em clock.t_h, ex. 3.21:\"IDV6 ligado\" (pode repetir)")
+    ap.add_argument("--max-offset", action="append", default=[], metavar="MALHA=VALOR",
+                    help="maxOffset da política por malha, ex. reactor_pressure=20 (pode repetir)")
     ap.add_argument("--title", default=None)
     args = ap.parse_args()
 
     out = args.out or args.csv.with_suffix(".png")
+    max_offset = {name: float(value) for name, _, value in (m.partition("=") for m in args.max_offset)}
     plot(load(args.csv), out, args.pi_threshold, args.gate, [parse_mark(m) for m in args.mark],
-         args.title or args.csv.stem)
+         args.title or args.csv.stem, max_offset)
 
 
 if __name__ == "__main__":

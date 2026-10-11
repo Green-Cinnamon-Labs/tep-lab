@@ -92,6 +92,7 @@ def main() -> None:
     ap.add_argument("--line", action="append", default=[], metavar="SINAL=VALOR:ROTULO",
                     help="referência horizontal no painel de um sinal")
     ap.add_argument("--tmin", type=float, default=None, help="mostra só a partir deste clock.t_h")
+    ap.add_argument("--tmax", type=float, default=None, help="mostra só até este clock.t_h")
     ap.add_argument("--title", default=None)
     args = ap.parse_args()
 
@@ -100,6 +101,8 @@ def main() -> None:
         df = pd.read_csv(path).dropna(subset=["sim_t_h"]).sort_values("sim_t_h")
         if args.tmin is not None:
             df = df[df["sim_t_h"] >= args.tmin]
+        if args.tmax is not None:
+            df = df[df["sim_t_h"] <= args.tmax]
         runs.append((args.label[i] if i < len(args.label) else path.stem, df))
     plot(runs, args.out or args.csv[0].with_suffix(".png"), args.keys, [parse_mark(m) for m in args.mark],
          [parse_line(x) for x in args.line], args.title or args.csv[0].stem)

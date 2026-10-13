@@ -52,6 +52,16 @@ poetry run run-timeline ../data/experiment_89/pi_nominal_longo_2026-10-10.csv --
 poetry run signals-timeline ../data/experiment_89/pi_nominal_longo_sinais_2026-10-10.csv ../data/experiment_89/p_controle_sinais_2026-10-11.csv --label PI --label P --out ../data/experiment_89/pi_vs_p_sinais_2026-10-11.png
 ```
 
+## experiment_91/
+
+Resultados da otimização em regime permanente (spec #91), gerados pelo `tep-optimizer` chamando o `tep-plant` no modo função. Aqui não há série no tempo: cada arquivo é a solução de um problema de otimização.
+
+| Arquivo | O que é |
+|---|---|
+| `mode1.json` | Modo 1 de Ricker (1995), rodado em 2026-10-13 com os limites do artigo (pressão do reator até 2800 kPa, nível do reator a partir de 65 %, reciclo e vapor a partir de 1 %). Duas partidas: do caso base (112,58 $/h, reciclo aberto) e com o reciclo fechado e depois solto (114,32 $/h, a solução do artigo, que publica 114,31). Para cada uma: custo por parcela, produção, as 12 válvulas, as 41 medições, os 38 estados e como o solver parou. Traz também os valores das Tabelas 2, 3 e 4 do artigo. |
+
+Gerado com `tep-optimizer optimize --out data/experiment_91/mode1.json`, usando `tep-optimizer` em `060bcf9`, `tep-plant` em `d879617` (branch `feat/function-mode`) e `monjolo` em `1860e5d` (branch `feat/function-http`).
+
 ## Como plotar
 
 Com o pacote em `../analysis/`:

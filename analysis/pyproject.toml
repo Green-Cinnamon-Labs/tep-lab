@@ -12,6 +12,7 @@ dependencies = [
 plot = "tep_analysis.plot:main"
 run-timeline = "tep_analysis.run_timeline:main"
 signals-timeline = "tep_analysis.signals_timeline:main"
+loop-rereading = "tep_analysis.loop_rereading:main"
 
 [build-system]
 requires = ["hatchling"]

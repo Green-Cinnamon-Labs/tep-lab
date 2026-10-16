@@ -25,6 +25,22 @@ Gravações do experimento #82 (função de custo e qualidade das malhas sob dis
 | `idv6_2026-10-08.png` | Linha do tempo dessa rodada, com os marcos de liga/desliga. |
 | `idv6_maxoffset_2026-10-08.csv` | Experimento 26: mesma rodada com o critério de seguimento de setpoint (`maxOffset`); IDV6 ligado em 2.02 e desligado em 3.22; 35 avaliações. |
 | `idv6_maxoffset_2026-10-08.png` | Linha do tempo dessa rodada. |
+| `releitura_pi_2026-10-16.png` | Releitura do Predictability Index na escala do artigo (`1 − pi`), feita sobre as gravações com `../analysis` → `poetry run loop-rereading`: limite 0,5 calibrado na rodada nominal (índice de 0,60 a 0,85), mesmo portão e mesma persistência do supervisor, sem o `maxOffset`. Painéis: calibração, Experimento 25 e Experimento 27 (rodada 1). Nenhuma rodada nova. |
+
+Para refazer a releitura, de dentro de `../analysis/` (a tabela impressa traz também os Experimentos 26 e 27, rodada 2 e controle):
+
+```bash
+poetry run loop-rereading --nominal ../data/experiment_82/calibracao_2026-10-08.csv \
+  --run ../data/experiment_82/calibracao_2026-10-08.csv --label "Calibração: malhas P, velocidade 5, sem distúrbio" \
+  --run ../data/experiment_82/idv6_2026-10-08.csv --label "Experimento 25: malhas P, velocidade 5, IDV(6)" \
+  --run ../data/experiment_82/idv6_maxoffset_2026-10-08.csv --label "Experimento 26: malhas P, velocidade 5, IDV(6)" \
+  --run ../data/experiment_89/pi_nominal_2026-10-10.csv --label "Experimento 27, rodada 1: malhas PI, velocidade 5, sem distúrbio" \
+  --run ../data/experiment_89/pi_nominal_longo_2026-10-10.csv --label "Experimento 27, rodada 2: malhas PI, velocidade 30" \
+  --run ../data/experiment_89/p_controle_2026-10-11.csv --label "Experimento 27, controle: malhas P, velocidade 30" \
+  --plot 1 --plot 2 --plot 4 \
+  --mark 2:2.31:"IDV6 ligado" --mark 2:3.84:"IDV6 desligado" --mark 2:3.46:"NonCompliant" \
+  --out ../data/experiment_82/releitura_pi_2026-10-16.png
+```
 
 ## experiment_89/
 

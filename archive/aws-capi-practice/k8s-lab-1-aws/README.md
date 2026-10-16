@@ -21,7 +21,7 @@ Não coloque nenhuma frase nem nada, só dê enter 'vazio' em tudo.
 
 ## 2 – Provisionar a instância EC2 com Terraform
 
-Agora navegue até a pasta *k8s-lab-1-aws/terraform*. Nessa pasta, preciso que faça a [Configuração das credenciais AWS](../.aws/README.md#configuração-das-credenciais-aws).
+Agora navegue até a pasta *k8s-lab-1-aws/terraform*. Nessa pasta, preciso que faça a [Configuração das credenciais AWS](../aws-account.md#configuração-das-credenciais-aws).
 
 Inicializar o Terraform:
 ```bash
@@ -49,7 +49,7 @@ terraform destroy
 
 Para acessar a instância criada, você pode ir até `EC2 > Instances > **id_sua_instancia** > Connect to instance`. Verá um Exemplo de comando de conexão ssh, algo assim: `ssh -i "k8s-bootstrap-lab-key.pem" ubuntu@ec2-34-201-148-231.compute-1.amazonaws.com`. 
 
-<p align="center"><img src="../docs/images/image1.png" width="500"><br><em>Onde encontrar o SSH de conexão no EC2</em></p>
+<p align="center"><img src="../images/image1.png" width="500"><br><em>Onde encontrar o SSH de conexão no EC2</em></p>
 
 > 🔎 **NOTA** : a parte *ubuntu@ec2-34-201-148-231.compute-1.amazonaws.com* é dinâmica e atribuída pela AWS, pois está vinculada ao IP público da instância. Ela muda quando a instância é **parada** e **iniciada** novamente (ou **recriada**).
 

@@ -10,22 +10,22 @@
 
 Eu criei uma conta no Console AWS com meu email pessoal e selecionei o plano gratuito na AWS. Você terá **$100.00** de crédito para usar que expiram depois de muito tempo. 
 
-<p align="center"><img src="../docs/images/image2.png" width="500"><br><em>Planos na hora de se cadastrar na AWS</em></p>
+<p align="center"><img src="images/image2.png" width="500"><br><em>Planos na hora de se cadastrar na AWS</em></p>
 
 Quando acessar pela primeira vez, será com a credencial de **root**, que não deve ser utilizada para nenhuma forma de implementação. Prossiga criando um usuário no serviço **IAM** e dê as permissões devidas a ele.
 
 Você pode ver isso acessando com as credenciais de **root** e navegando até `Billing and Cost Management > Credits`.
 
-<p align="center"><img src="../docs/images/image3.png" width="500"><br><em>Demonstração de créditos na AWS</em></p>
+<p align="center"><img src="images/image3.png" width="500"><br><em>Demonstração de créditos na AWS</em></p>
 
 
 ## Atributa as permissões ao seu usuário
 
 
-<p align="center"><img src="../docs/images/image4.png" width="500"><br><em>Grupo criado</em></p>
+<p align="center"><img src="images/image4.png" width="500"><br><em>Grupo criado</em></p>
 
 
-<p align="center"><img src="../docs/images/image5.png" width="500"><br><em>Políticas atribuídas ao Grupo</em></p>
+<p align="center"><img src="images/image5.png" width="500"><br><em>Políticas atribuídas ao Grupo</em></p>
 
 ##  Configuração das credenciais AWS
 

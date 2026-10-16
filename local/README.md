@@ -26,6 +26,8 @@ Sao quatro pecas:
 ```
 local/
 ├── docker-compose.yml               # Sobe planta + historian + IHM
+├── build-images.sh                  # Constroi as 4 imagens a partir das tags do GitHub
+├── images/tep-plant/                # Dockerfile da planta (compila tep-plant + monjolo no Docker)
 ├── kind-config.yaml                 # Config do cluster Kind
 ├── setup.sh                         # Sobe o cluster, o supervisor e os manifestos TEP
 ├── k8s/
@@ -44,20 +46,25 @@ local/
 
 ### 1. Planta + historian (+ IHM)
 
-**Opcao A — Docker compose.** Builde as imagens e suba:
+**Opcao A — Docker compose.** Construa as imagens e suba:
 
 ```bash
-# tep-plant: o Dockerfile copia um binario Linux ja compilado (target/release/tep-plant),
-# com a feature opcua ligada:  cargo build --release --bin tep-plant --features opcua
-docker build -t tep-plant:latest <path-to-tep-plant>
-docker build -t tep-historian:latest <path-to-tep-historian>
-docker build -t tep-ihm:latest <path-to-tep-ihm>
-
 cd tep-lab/local/
-docker compose up
+bash build-images.sh          # as 4 imagens, a partir das tags do GitHub (a planta compila no Docker)
+docker compose up -d
 ```
 
-**Opcao B — nativo** (o caminho mais simples no Windows, onde o binario da planta e `.exe`):
+O `build-images.sh` fixa o conjunto de versoes de uma release: `tep-plant v2.0.0` (malhas P) com `monjolo v1.1.0`, `tep-historian v1.0.0`, `tep-ihm v1.2.0` e `plant-supervisor v1.0.0`. Para a planta com malhas PI (Experimento 27): `bash build-images.sh pi` e `TEP_PLANT_IMAGE=tep-plant:2.1.0-alpha docker compose up -d`.
+
+A imagem da planta vem de `images/tep-plant/Dockerfile`, que compila o tep-plant junto com o monjolo dentro do Docker. O Dockerfile do proprio tep-plant copia um binario ja compilado, que no Windows e `.exe` e nao roda no container.
+
+Todos falam com a planta por `opc.tcp://tep-plant:4840/tep/server/`, que e o endereco que ela anuncia no OPC UA (ver o comentario no `docker-compose.yml`). Para o UaExpert no Windows, acrescente uma vez, num PowerShell como administrador:
+
+```powershell
+Add-Content C:\Windows\System32\drivers\etc\hosts "127.0.0.1 tep-plant"
+```
+
+**Opcao B — nativo** (para depurar no VS Code):
 
 ```bash
 cd <path-to-tep-plant>      && cargo run --features opcua
@@ -70,9 +77,8 @@ Confira o historian: `curl localhost:8090/healthz` deve mostrar `"connected": tr
 ### 2. Kind + supervisor + manifestos TEP
 
 ```bash
-docker build -t plant-supervisor:latest <path-to-plant-supervisor>
 cd tep-lab/local/
-bash setup.sh
+bash setup.sh      # usa plant-supervisor:latest, construida pelo build-images.sh
 ```
 
 O script cria o cluster `tep-lab`, carrega a imagem do supervisor, aplica as CRDs, deploya o supervisor e aplica `k8s/tep/`.
@@ -100,7 +106,7 @@ kubectl get plant tep -o jsonpath='{range .status.loops[*]}{.name}: PI={.predict
 "}{end}'
 ```
 
-Em operacao nominal a malha de pressao do reator aparece `evaluated=false` (`OutputBelowGate`): a valvula de purga quase nao se mexe, entao ela fica fora do julgamento (spec #86). Os limiares das malhas em `policy-mode1.yaml` sao provisorios ate a calibracao.
+Em operacao nominal a malha de pressao do reator aparece `evaluated=false` (`OutputBelowGate`): a valvula de purga quase nao se mexe, entao ela fica fora do julgamento (spec #86). Os limiares das malhas em `policy-mode1.yaml` foram calibrados numa rodada nominal em 2026-10-08 (`../data/experiment_82/calibracao_2026-10-08.csv`); o comentario no topo do arquivo explica cada um.
 
 ### 4. Trocar de politica ou mexer no orcamento
 

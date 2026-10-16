@@ -1,12 +1,19 @@
 # data
 
-Dados gerados pelo laboratório: séries de simulação (CSV) e os gráficos feitos a partir delas. Ficam aqui, e não no repositório de especificação, para que `spec-tennessee-eastman` guarde só documentação e discussão de issues. Movidos de lá em 2026-10-08; os experimentos que os produziram estão descritos em `spec-tennessee-eastman/experimentos.md`.
+Dados gerados pelo laboratório: séries de simulação (CSV) e os gráficos feitos a partir delas. Ficam aqui, e não no repositório de especificação, para que `spec-tennessee-eastman` guarde só documentação e discussão de issues. Movidos de lá em 2026-10-08; os experimentos que os produziram estão descritos em [`spec-tennessee-eastman/experimentos.md`](https://github.com/Green-Cinnamon-Labs/spec-tennessee-eastman/blob/main/experimentos.md).
+
+| Pasta | Experimentos | Planta |
+|---|---|---|
+| [`simulations/`](#simulations) | 1 a 16 | Primeira versão em Rust e a da pilha com gRPC |
+| [`experiment_82/`](#experiment_82) | Calibração da política, 25 e 26 (IDV(6) observado pelo Kubernetes) | `tep-plant v2.0.0`, malhas P |
+| [`experiment_89/`](#experiment_89) | 27 (malhas PI em operação nominal e o controle com P) | `tep-plant v2.1.0-alpha` |
+| [`experiment_91/`](#experiment_91) | Otimização em regime permanente (spec #91), sem série no tempo | `tep-plant v2.2.0-alpha`, modo função |
 
 ## simulations/
 
 | Arquivo | Origem no spec | Observação |
 |---|---|---|
-| `simulation_log.csv`, `simulation_log_N.csv`, `simulation_log_N.0.csv` | `docs/simulations/` | Uma série por experimento (o número é o do experimento em `experimentos.md`) |
+| `simulation_log.csv`, `simulation_log_N.csv`, `simulation_log_N.0.csv` | `docs/simulations/` | Uma série por experimento. O número do arquivo nem sempre é o do experimento: o Exp 10 gravou `simulation_log_12.csv` e o Exp 11, `simulation_log_13.csv` (ver as entradas em `experimentos.md`) |
 | `simulation_log_exp_13.csv` | `docs/data/` | Série do Exp 13, diferente de `simulation_log_13.csv` (conteúdo não idêntico) |
 | `plots/simulation_log*.png` | `docs/simulations/plots/` | Gráfico de cada série |
 | `plots/simulation_log_14.0_alt.png` | `docs/csvs/simulation_log_14.0.png` | Outra versão do gráfico do Exp 14 (não idêntica a `plots/simulation_log_14.0.png`) |
@@ -25,6 +32,22 @@ Gravações do experimento #82 (função de custo e qualidade das malhas sob dis
 | `idv6_2026-10-08.png` | Linha do tempo dessa rodada, com os marcos de liga/desliga. |
 | `idv6_maxoffset_2026-10-08.csv` | Experimento 26: mesma rodada com o critério de seguimento de setpoint (`maxOffset`); IDV6 ligado em 2.02 e desligado em 3.22; 35 avaliações. |
 | `idv6_maxoffset_2026-10-08.png` | Linha do tempo dessa rodada. |
+| `releitura_pi_2026-10-16.png` | Releitura do Predictability Index na escala do artigo (`1 − pi`), feita sobre as gravações com `../analysis` → `poetry run loop-rereading`: limite 0,5 calibrado na rodada nominal (índice de 0,60 a 0,85), mesmo portão e mesma persistência do supervisor, sem o `maxOffset`. Painéis: calibração, Experimento 25 e Experimento 27 (rodada 1). Nenhuma rodada nova. |
+
+Para refazer a releitura, de dentro de `../analysis/` (a tabela impressa traz também os Experimentos 26 e 27, rodada 2 e controle):
+
+```bash
+poetry run loop-rereading --nominal ../data/experiment_82/calibracao_2026-10-08.csv \
+  --run ../data/experiment_82/calibracao_2026-10-08.csv --label "Calibração: malhas P, velocidade 5, sem distúrbio" \
+  --run ../data/experiment_82/idv6_2026-10-08.csv --label "Experimento 25: malhas P, velocidade 5, IDV(6)" \
+  --run ../data/experiment_82/idv6_maxoffset_2026-10-08.csv --label "Experimento 26: malhas P, velocidade 5, IDV(6)" \
+  --run ../data/experiment_89/pi_nominal_2026-10-10.csv --label "Experimento 27, rodada 1: malhas PI, velocidade 5, sem distúrbio" \
+  --run ../data/experiment_89/pi_nominal_longo_2026-10-10.csv --label "Experimento 27, rodada 2: malhas PI, velocidade 30" \
+  --run ../data/experiment_89/p_controle_2026-10-11.csv --label "Experimento 27, controle: malhas P, velocidade 30" \
+  --plot 1 --plot 2 --plot 4 \
+  --mark 2:2.31:"IDV6 ligado" --mark 2:3.84:"IDV6 desligado" --mark 2:3.46:"NonCompliant" \
+  --out ../data/experiment_82/releitura_pi_2026-10-16.png
+```
 
 ## experiment_89/
 
@@ -51,6 +74,16 @@ Para refazer as figuras, de dentro de `../analysis/`:
 poetry run run-timeline ../data/experiment_89/pi_nominal_longo_2026-10-10.csv --max-offset reactor_pressure=20 --max-offset separator_level=1 --max-offset stripper_level=1
 poetry run signals-timeline ../data/experiment_89/pi_nominal_longo_sinais_2026-10-10.csv ../data/experiment_89/p_controle_sinais_2026-10-11.csv --label PI --label P --out ../data/experiment_89/pi_vs_p_sinais_2026-10-11.png
 ```
+
+## experiment_91/
+
+Resultados da otimização em regime permanente (spec #91), gerados pelo `tep-optimizer` chamando o `tep-plant` no modo função. Aqui não há série no tempo: cada arquivo é a solução de um problema de otimização.
+
+| Arquivo | O que é |
+|---|---|
+| `mode1.json` | Modo 1 de Ricker (1995), rodado em 2026-10-13 com os limites do artigo (pressão do reator até 2800 kPa, nível do reator a partir de 65 %, reciclo e vapor a partir de 1 %). Duas partidas: do caso base (112,58 $/h, reciclo aberto) e com o reciclo fechado e depois solto (114,32 $/h, a solução do artigo, que publica 114,31). Para cada uma: custo por parcela, produção, as 12 válvulas, as 41 medições, os 38 estados e como o solver parou. Traz também os valores das Tabelas 2, 3 e 4 do artigo. |
+
+Gerado com `tep-optimizer optimize --out data/experiment_91/mode1.json`, usando `tep-optimizer` em `060bcf9`, `tep-plant` em `d879617` (branch `feat/function-mode`) e `monjolo` em `1860e5d` (branch `feat/function-http`).
 
 ## Como plotar
 

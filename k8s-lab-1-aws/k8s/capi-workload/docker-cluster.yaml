@@ -1,5 +1,0 @@
-# CRD do CAPD. Implementa como o cluster vira infraestrutura (containers).
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-kind: DockerCluster
-metadata:
-  name: demo-cluster

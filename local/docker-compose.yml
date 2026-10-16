@@ -1,36 +1,46 @@
-# docker compose up        — sobe planta + historian + IHM
-# docker compose up -d     — sobe em background
-# docker compose down      — para tudo
+# Planta, historian e IHM em containers. O supervisor fica no Kind (bash setup.sh).
 #
-# O Kind (plant-supervisor) continua sendo gerenciado pelo setup.sh,
-# porque é um cluster Kubernetes e não um container simples.
+#   bash build-images.sh       # imagens em versões fixas, a partir das tags do GitHub
+#   docker compose up -d
 #
-# Fluxo de dados:
-#   tep-plant ──OPC-UA :4840──▶ tep-historian ──HTTP :8090──▶ plant-supervisor (Kind)
-#   tep-plant ──OPC-UA :4840──▶ tep-ihm (sinais ao vivo)
-#   Kubernetes API ───────────▶ tep-ihm (veredito: Plant.status)
+# Planta com malhas PI (Experimento 27):
+#   bash build-images.sh pi && TEP_PLANT_IMAGE=tep-plant:2.1.0-alpha docker compose up -d
+#
+# Todos falam com a planta por opc.tcp://tep-plant:4840/tep/server/. O monjolo escuta e anuncia o
+# endpoint OPC UA no mesmo host, e clientes como o UaExpert sempre reconectam no endereço anunciado.
+# Dentro do container da planta, tep-plant aponta para 0.0.0.0, então ela escuta em todas as
+# interfaces; na rede do compose, aponta para o container da planta. No Windows, para o UaExpert, é
+# preciso uma linha no hosts (PowerShell como administrador, uma vez só):
+#   Add-Content C:\Windows\System32\drivers\etc\hosts "127.0.0.1 tep-plant"
 
 services:
   tep-plant:
-    image: tep-plant:latest
+    image: ${TEP_PLANT_IMAGE:-tep-plant:2.0.0}
     container_name: tep-plant
     ports:
       - "4840:4840"
+    extra_hosts:
+      - "tep-plant:0.0.0.0"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/4840"]
+      interval: 2s
+      retries: 30
 
   tep-historian:
-    image: tep-historian:latest
+    image: ${TEP_HISTORIAN_IMAGE:-tep-historian:1.0.0}
     container_name: tep-historian
     ports:
-      - "8090:8090"   # exposta no host: o supervisor no Kind chega por host.docker.internal:8090
+      - "8090:8090"   # o supervisor no Kind chega por host.docker.internal:8090
     environment:
       - OPCUA_ENDPOINT=opc.tcp://tep-plant:4840/tep/server/
-      - SAMPLE_INTERVAL_MS=100   # planta na velocidade 5 = um tick a cada 100 ms (spec #85, bloco 6)
+      - SAMPLE_INTERVAL_MS=100   # planta na velocidade 5 = um passo a cada 100 ms (spec #85, bloco 6)
       - RETENTION_S=900
     depends_on:
-      - tep-plant
+      tep-plant:
+        condition: service_healthy
 
   tep-ihm:
-    image: tep-ihm:latest
+    image: ${TEP_IHM_IMAGE:-tep-ihm:1.2.0}
     container_name: tep-ihm
     ports:
       - "8080:8080"
@@ -38,8 +48,11 @@ services:
       - OPCUA_ENDPOINT=opc.tcp://tep-plant:4840/tep/server/
       - K8S_SERVER=https://host.docker.internal:6443
       - K8S_CR_NAME=tep
+      - SQLITE_DB_PATH=/data/sessions.db   # sessões de captura no volume, fora do container
+      - PYTHONUNBUFFERED=1                 # logs no docker logs na hora
     volumes:
       - ~/.kube/config:/root/.kube/config:ro
       - ./data:/data
     depends_on:
-      - tep-plant
+      tep-plant:
+        condition: service_healthy

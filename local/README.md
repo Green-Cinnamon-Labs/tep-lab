@@ -106,7 +106,7 @@ kubectl get plant tep -o jsonpath='{range .status.loops[*]}{.name}: PI={.predict
 "}{end}'
 ```
 
-Em operacao nominal a malha de pressao do reator aparece `evaluated=false` (`OutputBelowGate`): a valvula de purga quase nao se mexe, entao ela fica fora do julgamento (spec #86). Os limiares das malhas em `policy-mode1.yaml` sao provisorios ate a calibracao.
+Em operacao nominal a malha de pressao do reator aparece `evaluated=false` (`OutputBelowGate`): a valvula de purga quase nao se mexe, entao ela fica fora do julgamento (spec #86). Os limiares das malhas em `policy-mode1.yaml` foram calibrados numa rodada nominal em 2026-10-08 (`../data/experiment_82/calibracao_2026-10-08.csv`); o comentario no topo do arquivo explica cada um.
 
 ### 4. Trocar de politica ou mexer no orcamento
 

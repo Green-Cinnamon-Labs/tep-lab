@@ -1,6 +1,6 @@
 # TEP Analysis — Pacote de Análise
 
-Pacote Python para visualização dos CSVs gerados pela simulação do Tennessee Eastman (um sistema ciber-físico, CPS — não é um "digital twin": não existe planta física de referência).
+Pacote Python que transforma as gravações do laboratório (`../data/`) em figuras.
 
 ## Por que este pacote existe
 
@@ -57,8 +57,8 @@ O caminho deve apontar para o ambiente virtual do Poetry, não para o Python glo
 A imagem do plot é salva ao lado do CSV, com extensão `.png`.
 
 Exemplo:
-- `../tennessee-eastman-service/simulation_log.csv`
-- `../tennessee-eastman-service/simulation_log.png`
+- `../data/simulations/simulation_log.csv`
+- `../data/simulations/simulation_log.png`
 
 ## Linha do tempo de uma rodada (`run-timeline`)
 
@@ -66,7 +66,17 @@ Para as gravações feitas com `../local/scripts/record_run.py` (calibração e 
 
 ```bash
 poetry install
-poetry run run-timeline ../data/experiment_82/idv6_2026-10-08.csv     --mark 3.21:"IDV6 ligado" --mark 10.3:"IDV6 desligado"
+poetry run run-timeline ../data/experiment_82/idv6_2026-10-08.csv --mark 2.31:"IDV6 ligado" --mark 3.84:"IDV6 desligado"
 ```
 
-O PNG sai ao lado do CSV. `--pi-threshold` e `--gate` devem bater com `minPredictability` e `minOutputStd` da política (padrão 0.12 e 0.05).
+O PNG sai ao lado do CSV. `--pi-threshold` e `--gate` devem bater com `minPredictability` e `minOutputStd` da política (padrão 0.12 e 0.05); `--max-offset malha=valor` acrescenta o painel do offset.
+
+## Sinais da planta (`signals-timeline`)
+
+Para as gravações do `../local/scripts/record_signals.py`: um painel por sinal no tempo simulado; por padrão, válvula de purga, pressão, nível e temperatura do reator e inerte B na purga (`--keys` escolhe outros). Aceita mais de uma gravação, sobrepostas nos mesmos eixos (`--label` para cada uma).
+
+## Releitura do índice das malhas (`loop-rereading`)
+
+Refaz, sobre gravações do `record_run.py`, o julgamento das malhas na escala do artigo de Bradu et al. (`1 − pi`), com as mesmas regras do supervisor e sem o critério de offset. Imprime uma tabela por rodada e, com `--plot`, gera a figura.
+
+Os comandos exatos que geraram cada figura dos experimentos estão em [`../data/README.md`](../data/README.md).

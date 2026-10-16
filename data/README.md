@@ -1,12 +1,19 @@
 # data
 
-Dados gerados pelo laboratório: séries de simulação (CSV) e os gráficos feitos a partir delas. Ficam aqui, e não no repositório de especificação, para que `spec-tennessee-eastman` guarde só documentação e discussão de issues. Movidos de lá em 2026-10-08; os experimentos que os produziram estão descritos em `spec-tennessee-eastman/experimentos.md`.
+Dados gerados pelo laboratório: séries de simulação (CSV) e os gráficos feitos a partir delas. Ficam aqui, e não no repositório de especificação, para que `spec-tennessee-eastman` guarde só documentação e discussão de issues. Movidos de lá em 2026-10-08; os experimentos que os produziram estão descritos em [`spec-tennessee-eastman/experimentos.md`](https://github.com/Green-Cinnamon-Labs/spec-tennessee-eastman/blob/main/experimentos.md).
+
+| Pasta | Experimentos | Planta |
+|---|---|---|
+| [`simulations/`](#simulations) | 1 a 16 | Primeira versão em Rust e a da pilha com gRPC |
+| [`experiment_82/`](#experiment_82) | Calibração da política, 25 e 26 (IDV(6) observado pelo Kubernetes) | `tep-plant v2.0.0`, malhas P |
+| [`experiment_89/`](#experiment_89) | 27 (malhas PI em operação nominal e o controle com P) | `tep-plant v2.1.0-alpha` |
+| [`experiment_91/`](#experiment_91) | Otimização em regime permanente (spec #91), sem série no tempo | `tep-plant v2.2.0-alpha`, modo função |
 
 ## simulations/
 
 | Arquivo | Origem no spec | Observação |
 |---|---|---|
-| `simulation_log.csv`, `simulation_log_N.csv`, `simulation_log_N.0.csv` | `docs/simulations/` | Uma série por experimento (o número é o do experimento em `experimentos.md`) |
+| `simulation_log.csv`, `simulation_log_N.csv`, `simulation_log_N.0.csv` | `docs/simulations/` | Uma série por experimento. O número do arquivo nem sempre é o do experimento: o Exp 10 gravou `simulation_log_12.csv` e o Exp 11, `simulation_log_13.csv` (ver as entradas em `experimentos.md`) |
 | `simulation_log_exp_13.csv` | `docs/data/` | Série do Exp 13, diferente de `simulation_log_13.csv` (conteúdo não idêntico) |
 | `plots/simulation_log*.png` | `docs/simulations/plots/` | Gráfico de cada série |
 | `plots/simulation_log_14.0_alt.png` | `docs/csvs/simulation_log_14.0.png` | Outra versão do gráfico do Exp 14 (não idêntica a `plots/simulation_log_14.0.png`) |

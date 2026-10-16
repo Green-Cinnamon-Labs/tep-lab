@@ -4,36 +4,45 @@ Este documento explica como o ambiente local funciona: o que roda onde, por que 
 
 ## O que roda na máquina do desenvolvedor
 
-Na máquina do dev rodam dois mundos com funções completamente diferentes: a planta e seu historian (fora do Kubernetes) e o nó Kind (o Kubernetes):
+Na máquina do dev rodam dois mundos com funções completamente diferentes: a planta, o historian e a IHM, no Docker Compose, fora do Kubernetes; e o nó Kind, que é o Kubernetes:
 
 ```
 Máquina do Dev (Docker Desktop)
 │
-├── tep-plant (Rust) — container ou processo nativo
-│   └── Simulação Tennessee Eastman, sinais publicados via OPC-UA
-│   └── Porta exposta: 4840
-│   └── Roda standalone, não sabe que o Kubernetes existe
-│
-├── tep-historian (Python) — container ou processo nativo
-│   └── Lê todos os sinais da planta via OPC-UA, serve médias por janela via HTTP
-│   └── Porta exposta: 8090
+├── Docker Compose (local/docker-compose.yml)
+│   ├── tep-plant (Rust)
+│   │   └── Simulação Tennessee Eastman, sinais publicados via OPC-UA
+│   │   └── Porta exposta: 4840; anuncia-se como opc.tcp://tep-plant:4840/tep/server/
+│   │   └── Roda sozinha, não sabe que o Kubernetes existe
+│   ├── tep-historian (Python)
+│   │   └── Lê todos os sinais da planta via OPC-UA, serve estatísticas por janela via HTTP
+│   │   └── Porta exposta: 8090
+│   └── tep-ihm (Python)
+│       └── Fluxograma ao vivo no navegador (OPC-UA) e veredito lido da API do Kubernetes
+│       └── Porta exposta: 8080
 │
 └── Container: Kind (nó Kubernetes)
     └── containerd (runtime de containers do K8s)
         ├── Pod: plant-supervisor (Go, controller-runtime)
-        ├── Pod: kube-apiserver
+        ├── Pod: kube-apiserver (exposto na porta 6443 da máquina)
         ├── Pod: etcd
         ├── Pod: coredns
         └── Pod: kube-controller-manager, kube-scheduler, kube-proxy
 
 Comunicação:
-  tep-historian ──OPC-UA──▶ tep-plant (:4840)
-  plant-supervisor  ──HTTP────▶ tep-historian (via host.docker.internal:8090)
+  tep-historian    ──OPC-UA──▶ tep-plant (:4840)
+  tep-ihm          ──OPC-UA──▶ tep-plant (:4840)
+  plant-supervisor ──HTTP────▶ tep-historian (via host.docker.internal:8090)
+  tep-ihm          ──HTTPS───▶ kube-apiserver (via host.docker.internal:6443, watch do Plant)
 ```
+
+Durante o desenvolvimento, os três programas do Compose também podem rodar direto no VS Code, com as mesmas portas; foi assim que os experimentos de outubro de 2026 foram feitos.
 
 A **planta** simula o processo químico Tennessee Eastman e publica seus sinais via OPC-UA. Ela não tem nada a ver com Kubernetes.
 
 O **historian** é o middleware: traduz sinais brutos em estatísticas por janela. O Kubernetes nunca vê sinal bruto.
+
+A **IHM** é só para o pesquisador ver a planta e o veredito. Ela não fala com o supervisor: lê o veredito do `status` do `Plant`, que fica guardado no Kubernetes.
 
 O **nó Kind** Dentro dele roda um Kubernetes real e completo, com seu próprio runtime de containers (containerd). O supervisor roda como Pod dentro desse Kubernetes.
 

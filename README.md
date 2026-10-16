@@ -10,7 +10,8 @@ The lab puts a simulated chemical plant (the Tennessee Eastman process) under th
 | [`data/`](data/) | Recordings and figures from the experiments, one folder per experiment. |
 | [`analysis/`](analysis/) | Python package that turns the recordings into figures. |
 | [`docs/`](docs/) | [Why each piece runs where it runs](docs/arquitetura-local.md) (in Portuguese). |
-| [`archive/`](archive/) | An early AWS and Cluster API practice, kept for the record. |
+
+An early practice with AWS, Terraform and the Cluster API, unrelated to the TEP, lived here until [`v1.0.0`](https://github.com/Green-Cinnamon-Labs/tep-lab/tree/v1.0.0).
 
 ## Running the lab
 

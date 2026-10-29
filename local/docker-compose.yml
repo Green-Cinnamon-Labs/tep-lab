@@ -27,7 +27,7 @@ services:
       retries: 30
 
   tep-historian:
-    image: ${TEP_HISTORIAN_IMAGE:-tep-historian:1.0.0}
+    image: ${TEP_HISTORIAN_IMAGE:-tep-historian:1.1.0}
     container_name: tep-historian
     ports:
       - "8090:8090"   # o supervisor no Kind chega por host.docker.internal:8090

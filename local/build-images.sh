@@ -17,7 +17,7 @@ case "${1:-p}" in
     pi) PLANT="v2.1.0-alpha"; MONJOLO="v1.2.0-alpha" ;;
     *)  echo "uso: bash build-images.sh [p|pi]" >&2; exit 1 ;;
 esac
-HISTORIAN="v1.0.0"
+HISTORIAN="v1.1.0"
 IHM="v1.2.0"
 SUPERVISOR="v1.0.0"
 
